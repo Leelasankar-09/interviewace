@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, dsa, behavioral, systemdesign, mock, resume, community, profile
+from routers import auth, dsa, behavioral, systemdesign, mock, resume, community, profile, voice, questions
 
 app = FastAPI(title="InterviewAce API", version="1.0.0")
 
@@ -22,6 +22,8 @@ app.include_router(mock.router, prefix="/api")
 app.include_router(resume.router, prefix="/api")
 app.include_router(community.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
+app.include_router(voice.router, prefix="/api")
+app.include_router(questions.router, prefix="/api")
 
 
 @app.get("/")

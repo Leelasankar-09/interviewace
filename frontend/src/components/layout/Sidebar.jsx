@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
     FiGrid, FiCode, FiMic, FiLayers, FiPlay, FiFileText,
     FiUsers, FiBriefcase, FiBarChart2, FiUser, FiLogOut,
-    FiChevronLeft, FiChevronRight, FiZap
+    FiChevronLeft, FiChevronRight, FiZap, FiHelpCircle
 } from 'react-icons/fi';
 import useAuthStore from '../../store/authStore';
 
@@ -18,6 +18,7 @@ const navItems = [
     { to: '/community', icon: FiUsers, label: 'Community' },
     { to: '/roles', icon: FiBriefcase, label: 'Roles' },
     { to: '/platforms', icon: FiBarChart2, label: 'Platforms' },
+    { to: '/questions', icon: FiHelpCircle, label: 'Question Gen' },
     { to: '/profile', icon: FiUser, label: 'Profile' },
 ];
 

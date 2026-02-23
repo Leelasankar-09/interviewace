@@ -23,6 +23,7 @@ import RoleDetail from './pages/RoleDetail';
 import VoiceEval from './pages/VoiceEval';
 import CodingPlatforms from './pages/CodingPlatforms';
 import Profile from './pages/Profile';
+import QuestionGenerator from './pages/QuestionGenerator';
 
 // Protected Route
 const Protected = ({ children }) => {
@@ -72,6 +73,7 @@ function App() {
         <Route path="/voice-eval" element={<Protected><AppLayout><VoiceEval /></AppLayout></Protected>} />
         <Route path="/platforms" element={<Protected><AppLayout><CodingPlatforms /></AppLayout></Protected>} />
         <Route path="/profile" element={<Protected><AppLayout><Profile /></AppLayout></Protected>} />
+        <Route path="/questions" element={<Protected><AppLayout><QuestionGenerator /></AppLayout></Protected>} />
       </Routes>
     </BrowserRouter>
   );
