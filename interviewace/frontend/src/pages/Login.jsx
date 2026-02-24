@@ -80,7 +80,7 @@ export default function Login() {
                         </div>
 
                         <div style={{ textAlign: 'right' }}>
-                            <a href="#" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none' }}>Forgot password?</a>
+                            <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</Link>
                         </div>
 
                         <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '0.8rem' }} disabled={isLoading}>

@@ -11,6 +11,8 @@ import Topbar from './components/layout/Topbar';
 // Pages
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import DSA from './pages/DSA';
 import Behavioral from './pages/Behavioral';
@@ -60,6 +62,8 @@ function App() {
         {/* Public */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         {/* Protected */}

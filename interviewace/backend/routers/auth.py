@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from jose import jwt, JWTError
-import os, datetime
+import os, datetime, secrets
 from typing import Optional
 
 from database import get_db
@@ -37,6 +37,17 @@ class ProfileUpdateInput(BaseModel):
     github: Optional[str] = None
     portfolio: Optional[str] = None
     is_public: Optional[bool] = None
+
+class ForgotPasswordInput(BaseModel):
+    email: str
+
+class ResetPasswordInput(BaseModel):
+    token: str
+    new_password: str
+
+# In-memory store: {token: {user_id, expires_at}}
+# In production: replace with Redis or a DB table
+_reset_tokens: dict = {}
 
 # ── Helpers ────────────────────────────────────────────────────
 def create_token(data: dict):
@@ -129,3 +140,75 @@ def update_profile(body: ProfileUpdateInput, current_user: User = Depends(get_cu
     db.commit()
     db.refresh(user)
     return {"user": user_dict(user)}
+
+# ── Forgot Password ────────────────────────────────────────────
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordInput, db: Session = Depends(get_db)):
+    """
+    Generates a password-reset token valid for 30 minutes.
+    In production: send this link by email via SMTP/SendGrid.
+    In dev: the reset link is returned in the JSON response.
+    """
+    user = db.query(User).filter(User.email == body.email).first()
+    # Always return 200 to prevent email enumeration attacks
+    if not user:
+        return {"message": "If an account exists with that email, a reset link has been sent."}
+
+    # Generate a cryptographically secure token
+    token = secrets.token_urlsafe(32)
+    expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    _reset_tokens[token] = {"user_id": user.id, "expires_at": expires}
+
+    reset_url = f"http://localhost:5173/reset-password?token={token}"
+
+    return {
+        "message": "If an account exists with that email, a reset link has been sent.",
+        # NOTE: Remove 'reset_url' below before deploying to production
+        # In production, send this URL via email instead
+        "reset_url": reset_url,
+    }
+
+# ── Reset Password ─────────────────────────────────────────────
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordInput, db: Session = Depends(get_db)):
+    """
+    Accepts the one-time reset token and sets a new password.
+    """
+    if len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+
+    entry = _reset_tokens.get(body.token)
+    if not entry:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+
+    if datetime.datetime.utcnow() > entry["expires_at"]:
+        del _reset_tokens[body.token]
+        raise HTTPException(status_code=400, detail="Reset token has expired. Please request a new one.")
+
+    user = db.query(User).filter(User.id == entry["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    user.hashed_pw = pwd_ctx.hash(body.new_password)
+    db.commit()
+
+    # Invalidate the token after use
+    del _reset_tokens[body.token]
+
+    return {"message": "Password updated successfully. Please log in with your new password."}
+
+# ── Change Password (authenticated) ───────────────────────────
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.post("/change-password")
+def change_password(body: ChangePasswordInput, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Allows logged-in users to change their own password."""
+    if not pwd_ctx.verify(body.current_password, current_user.hashed_pw):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+    if len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+    current_user.hashed_pw = pwd_ctx.hash(body.new_password)
+    db.commit()
+    return {"message": "Password changed successfully."}
