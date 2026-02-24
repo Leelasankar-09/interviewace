@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.venv/
+venv/
+env/
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Recordings / uploads
+interviewace/backend/recordings/
+interviewace/backend/uploads/
+
+# Node
+node_modules/
+.npm/
+
+# Vite build output
+interviewace/frontend/dist/
+interviewace/frontend/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.idea/
+*.iml
+
+# VS Code (keep settings shared, ignore local-only)
+.vscode/settings.json
+.vscode/launch.json
+
+# Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
