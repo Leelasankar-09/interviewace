@@ -1,61 +1,72 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from 'recharts';
-import { getSessions, getLocalAnalytics, deleteSession } from '../store/sessionStore';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import useAuthStore from '../store/authStore';
+import { sessionsAPI, analyticsAPI } from '../api/services';
 
-const TYPE_LABELS = { voice: '🎙 Voice', behavioral: '💬 Behavioral', dsa: '💻 DSA', system_design: '🏗 System Design', mock: '🤖 Mock', resume: '📄 Resume' };
-const TYPE_COLORS = { voice: '#6366f1', behavioral: '#ec4899', dsa: '#10b981', system_design: '#f59e0b', mock: '#3b82f6', resume: '#8b5cf6' };
+const TYPE_LABELS = {
+    voice: '🎙 Voice', behavioral: '💬 Behavioral', dsa: '💻 DSA',
+    system_design: '🏗 System Design', mock: '🤖 Mock', resume: '📄 Resume'
+};
+const TYPE_COLORS = {
+    voice: '#6366f1', behavioral: '#ec4899', dsa: '#10b981',
+    system_design: '#f59e0b', mock: '#3b82f6', resume: '#8b5cf6'
+};
 
 function ScorePill({ score }) {
-    if (score == null) return <span className="text-xs text-gray-600">N/A</span>;
-    const color = score >= 80 ? 'text-emerald-400 bg-emerald-500/10' : score >= 60 ? 'text-yellow-400 bg-yellow-500/10' : 'text-red-400 bg-red-500/10';
-    return <span className={`text-xs font-black px-2 py-0.5 rounded-full ${color}`}>{score}%</span>;
+    if (score == null) return <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>N/A</span>;
+    const color = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
+    return (
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '1rem', background: color + '20', color }}>
+            {score}%
+        </span>
+    );
 }
 
 function GradeBadge({ grade }) {
     if (!grade) return null;
-    const color = grade.startsWith('A') ? 'text-emerald-400' : grade.startsWith('B') ? 'text-yellow-400' : 'text-red-400';
-    return <span className={`text-sm font-black ${color}`}>{grade}</span>;
-}
-
-function StatCard({ label, value, sub, color = '#6366f1' }) {
-    return (
-        <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-4">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-2xl font-black" style={{ color }}>{value}</p>
-            {sub && <p className="text-xs text-gray-600 mt-0.5">{sub}</p>}
-        </div>
-    );
+    const color = grade.startsWith('A') ? '#10b981' : grade.startsWith('B') ? '#f59e0b' : '#ef4444';
+    return <span style={{ fontSize: '1rem', fontWeight: 800, color }}>{grade}</span>;
 }
 
 export default function History() {
+    const { user } = useAuthStore();
+    const navigate = useNavigate();
     const [sessions, setSessions] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [filter, setFilter] = useState('all');
-    const [deleteId, setDeleteId] = useState(null);
-    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const LIMIT = 20;
 
-    const load = () => {
-        const type = filter === 'all' ? null : filter;
-        setSessions(getSessions({ type, limit: 100 }));
-        setAnalytics(getLocalAnalytics());
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const params = { page, limit: LIMIT };
+            if (filter !== 'all') params.session_type = filter;
+            if (user?.id) params.user_id = user.id;
+
+            const [histRes, analyticsRes] = await Promise.all([
+                sessionsAPI.history(params),
+                user?.id ? sessionsAPI.analytics(user.id, 90) : Promise.resolve(null),
+            ]);
+            setSessions(histRes.data.sessions || []);
+            setTotal(histRes.data.total || 0);
+            if (analyticsRes) setAnalytics(analyticsRes.data);
+        } catch { /* silent */ }
+        finally { setLoading(false); }
     };
 
-    useEffect(() => { load(); }, [filter]);
+    useEffect(() => {
+        analyticsAPI.track('page_view', '/history');
+    }, []);
 
-    const handleDelete = (id) => {
-        deleteSession(id);
-        setDeleteId(null);
-        load();
-    };
+    useEffect(() => {
+        loadData();
+    }, [filter, page, user?.id]);
 
-    const fmt = s => {
-        if (!s) return '—';
-        const d = Math.floor(s / 60), r = s % 60;
-        return d > 0 ? `${d}m ${r}s` : `${r}s`;
-    };
-
-    const relTime = iso => {
+    const relTime = (iso) => {
         if (!iso) return '';
         const diff = Date.now() - new Date(iso).getTime();
         const m = Math.floor(diff / 60000);
@@ -66,163 +77,136 @@ export default function History() {
         return `${Math.floor(h / 24)}d ago`;
     };
 
+    const PAGE_TABS = ['all', 'voice', 'behavioral', 'dsa', 'mock', 'system_design', 'resume'];
+
     return (
-        <div className="animate-[fadeIn_0.4s_ease] max-w-6xl mx-auto">
+        <div className="animate-fade" style={{ maxWidth: 1100, margin: '0 auto' }}>
             {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div>
-                    <h1 className="text-2xl font-black text-white">📚 Session History</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">All your interview attempts — locally stored &amp; synced</p>
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>📚 Session History</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        All your interview sessions — {total} total
+                    </p>
                 </div>
-                <button onClick={() => navigate('/voice-eval')}
-                    className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-pink-500 text-white text-sm font-bold rounded-xl hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all">
-                    + New Session
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => navigate('/behavioral')}
+                        style={{ padding: '0.6rem 1.2rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                        + New Session
+                    </button>
+                </div>
             </div>
 
             {/* Stats row */}
             {analytics && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                    <StatCard label="Total Sessions" value={analytics.total_sessions} sub="all time" color="#6366f1" />
-                    <StatCard label="Avg Score" value={`${analytics.avg_score}%`} sub="all sessions" color={analytics.avg_score >= 70 ? '#10b981' : '#f59e0b'} />
-                    <StatCard label="Best Score" value={`${analytics.best_score}%`} sub="personal best" color="#10b981" />
-                    <StatCard label="Streak" value={`${analytics.streak_days}d`} sub="consecutive days" color="#f59e0b" />
-                </div>
-            )}
-
-            {/* Charts row */}
-            {analytics && analytics.trend.length > 1 && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-                    {/* Trend */}
-                    <div className="lg:col-span-2 bg-gray-900/60 border border-white/10 rounded-2xl p-4">
-                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">📈 Score Trend (30 days)</p>
-                        <ResponsiveContainer width="100%" height={140}>
-                            <LineChart data={analytics.trend}>
-                                <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 9 }} tickFormatter={d => d.slice(5)} />
-                                <YAxis domain={[0, 100]} tick={{ fill: '#6b7280', fontSize: 9 }} />
-                                <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                                    formatter={v => [`${v}%`, 'Avg Score']} />
-                                <Line type="monotone" dataKey="avg_score" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                    {/* By type */}
-                    <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-4">
-                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">📊 Sessions by Type</p>
-                        <div className="flex flex-col gap-2">
-                            {Object.entries(analytics.by_type).map(([type, count]) => (
-                                <div key={type} className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 w-24 truncate">{TYPE_LABELS[type] || type}</span>
-                                    <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full" style={{
-                                            width: `${Math.min(100, count / analytics.total_sessions * 100)}%`,
-                                            background: TYPE_COLORS[type] || '#6366f1'
-                                        }} />
-                                    </div>
-                                    <span className="text-xs text-gray-500 w-5 text-right">{count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Dim Averages (voice sessions) */}
-            {analytics?.dim_avgs && Object.keys(analytics.dim_avgs).length > 0 && (
-                <div className="bg-gray-900/60 border border-white/10 rounded-2xl p-4 mb-5">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">🧠 Average Dimension Scores (Voice)</p>
-                    <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-                        {Object.entries(analytics.dim_avgs).map(([k, v]) => {
-                            const color = v >= 75 ? '#10b981' : v >= 55 ? '#f59e0b' : '#ef4444';
-                            return (
-                                <div key={k} className="bg-white/[0.03] rounded-xl p-2 border border-white/5 text-center">
-                                    <div className="text-lg font-black" style={{ color }}>{v}%</div>
-                                    <div className="text-[9px] text-gray-500 mt-0.5 capitalize">{k.replace('_', ' ')}</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Filter tabs */}
-            <div className="flex gap-2 mb-4 flex-wrap">
-                {['all', 'voice', 'behavioral', 'dsa', 'mock'].map(t => (
-                    <button key={t} onClick={() => setFilter(t)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filter === t ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40' : 'text-gray-500 border border-white/10 hover:text-white'
-                            }`}>
-                        {t === 'all' ? '🗂 All' : TYPE_LABELS[t] || t}
-                    </button>
-                ))}
-                <span className="ml-auto text-xs text-gray-600 self-center">{sessions.length} sessions</span>
-            </div>
-
-            {/* Session list */}
-            {sessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="text-5xl mb-4">📭</div>
-                    <p className="text-gray-500 text-sm">No sessions yet. <button onClick={() => navigate('/voice-eval')} className="text-indigo-400 hover:underline">Start practicing →</button></p>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-2">
-                    {sessions.map(s => (
-                        <div key={s.id}
-                            className="group bg-gray-900/60 border border-white/10 hover:border-white/20 rounded-2xl px-4 py-3 transition-all cursor-pointer"
-                            onClick={() => navigate(`/history/${s.id}`)}>
-                            <div className="flex items-center gap-4">
-                                {/* Type icon */}
-                                <span className="text-xl flex-shrink-0">{TYPE_LABELS[s.session_type]?.slice(0, 2)}</span>
-
-                                {/* Main info */}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-white font-medium truncate">
-                                        {s.question_text || `${s.session_type} session`}
-                                    </p>
-                                    <div className="flex gap-3 mt-0.5 text-xs text-gray-500">
-                                        <span>{relTime(s.created_at)}</span>
-                                        {s.duration_secs > 0 && <span>{fmt(s.duration_secs)}</span>}
-                                        {s.word_count > 0 && <span>{s.word_count} words</span>}
-                                        {s.filler_count > 0 && <span className="text-yellow-500">{s.filler_count} fillers</span>}
-                                        {s.vocal_filler_count > 0 && <span className="text-red-400">{s.vocal_filler_count}× uhm/um</span>}
-                                    </div>
-                                </div>
-
-                                {/* Score + grade */}
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                    <GradeBadge grade={s.grade} />
-                                    <ScorePill score={s.overall_score} />
-                                    {/* Mini dim bars */}
-                                    {s.dim_scores && Object.keys(s.dim_scores).length > 0 && (
-                                        <div className="hidden md:flex items-end gap-0.5 h-5">
-                                            {Object.values(s.dim_scores).slice(0, 8).map((v, i) => (
-                                                <div key={i} className="w-1.5 rounded-sm"
-                                                    style={{ height: `${Math.max(4, v / 100 * 20)}px`, background: v >= 75 ? '#10b981' : v >= 55 ? '#f59e0b' : '#ef4444' }} />
-                                            ))}
-                                        </div>
-                                    )}
-                                    {/* Delete */}
-                                    <button onClick={e => { e.stopPropagation(); setDeleteId(s.id); }}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-600 hover:text-red-400 text-xs px-2 py-1">
-                                        🗑
-                                    </button>
-                                </div>
-                            </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                    {[
+                        { label: 'Total Sessions', value: analytics.total_sessions, color: '#6366f1' },
+                        { label: 'Avg Score', value: `${analytics.avg_score}%`, color: analytics.avg_score >= 70 ? '#10b981' : '#f59e0b' },
+                        { label: 'Best Score', value: `${analytics.best_score}%`, color: '#10b981' },
+                        { label: 'Streak', value: `${analytics.streak_days}d 🔥`, color: '#f59e0b' },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} className="card" style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.75rem', fontWeight: 800, color, marginBottom: '0.25rem' }}>{value}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Delete confirm */}
-            {deleteId && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4">
-                        <h3 className="text-white font-bold mb-2">Delete session?</h3>
-                        <p className="text-sm text-gray-400 mb-5">This cannot be undone.</p>
-                        <div className="flex gap-3">
-                            <button onClick={() => setDeleteId(null)} className="flex-1 py-2 text-sm border border-white/10 rounded-xl text-gray-400 hover:text-white transition-all">Cancel</button>
-                            <button onClick={() => handleDelete(deleteId)} className="flex-1 py-2 text-sm bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-all font-bold">Delete</button>
+            {/* Trend chart */}
+            {analytics?.trend?.length > 1 && (
+                <div className="card" style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '0.9rem' }}>📈 Score Trend</h3>
+                    <ResponsiveContainer width="100%" height={130}>
+                        <LineChart data={analytics.trend}>
+                            <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} tickFormatter={d => d.slice(5)} />
+                            <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
+                            <Tooltip formatter={v => [`${v}%`, 'Avg Score']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }} />
+                            <Line type="monotone" dataKey="avg_score" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
+
+            {/* Filter tabs */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                {PAGE_TABS.map(t => (
+                    <button key={t} onClick={() => { setFilter(t); setPage(1); }}
+                        style={{
+                            padding: '0.4rem 1rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', border: '2px solid',
+                            borderColor: filter === t ? 'var(--accent)' : 'var(--border)',
+                            background: filter === t ? 'var(--accent)' : 'transparent',
+                            color: filter === t ? '#fff' : 'var(--text-primary)',
+                        }}>
+                        {t === 'all' ? '🗂 All' : (TYPE_LABELS[t] || t)}
+                    </button>
+                ))}
+            </div>
+
+            {/* Session list */}
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
+                    <p>Loading sessions…</p>
+                </div>
+            ) : sessions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                    <p>No sessions yet.</p>
+                    <button onClick={() => navigate('/behavioral')}
+                        style={{ marginTop: '1rem', padding: '0.6rem 1.5rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                        Start Practicing →
+                    </button>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {sessions.map(s => (
+                        <div key={s.id} className="card"
+                            style={{ cursor: 'pointer', transition: 'border-color 0.2s' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>
+                                    {{ 'voice': '🎙', 'behavioral': '💬', 'dsa': '💻', 'mock': '🤖', 'system_design': '🏗', 'resume': '📄' }[s.session_type] || '📝'}
+                                </span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {s.question_text || `${s.session_type} session`}
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        <span style={{ textTransform: 'capitalize', color: TYPE_COLORS[s.session_type] || 'var(--accent)', fontWeight: 600 }}>
+                                            {TYPE_LABELS[s.session_type] || s.session_type}
+                                        </span>
+                                        <span>{relTime(s.created_at)}</span>
+                                        {s.word_count > 0 && <span>{s.word_count} words</span>}
+                                        {s.filler_count > 0 && <span style={{ color: '#f59e0b' }}>{s.filler_count} fillers</span>}
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                                    <GradeBadge grade={s.grade} />
+                                    <ScorePill score={s.overall_score} />
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    ))}
+
+                    {/* Pagination */}
+                    {total > LIMIT && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1rem' }}>
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                                style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.4 : 1 }}>
+                                ← Prev
+                            </button>
+                            <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                Page {page} of {Math.ceil(total / LIMIT)}
+                            </span>
+                            <button onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(total / LIMIT)}
+                                style={{ padding: '0.5rem 1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary)', cursor: page >= Math.ceil(total / LIMIT) ? 'not-allowed' : 'pointer', opacity: page >= Math.ceil(total / LIMIT) ? 0.4 : 1 }}>
+                                Next →
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

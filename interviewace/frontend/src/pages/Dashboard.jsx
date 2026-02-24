@@ -1,19 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     RadarChart, Radar, PolarGrid, PolarAngleAxis, LineChart, Line, Legend
 } from 'recharts';
 import { FiCode, FiMic, FiLayers, FiFileText, FiTrendingUp, FiAward, FiZap, FiActivity } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
-
-// Mock data (replace with API calls)
-const mockUser = {
-    name: 'Leela Sankar',
-    streak: 12,
-    totalSessions: 47,
-    atsScore: 78,
-    overallScore: 72,
-};
+import { sessionsAPI, analyticsAPI } from '../api/services';
 
 const weeklyData = [
     { day: 'Mon', DSA: 3, Behavioral: 1, SystemDesign: 0, Mock: 0 },
@@ -76,13 +69,6 @@ const recentActivity = [
     { icon: '🏆', text: 'Completed 7-day streak! Earned badge', time: '3d ago', type: 'achievement' },
 ];
 
-const statCards = [
-    { icon: FiTrendingUp, label: 'Overall Score', value: '72/100', sub: '+4 this week', color: '#6366f1', trend: true },
-    { icon: FiCode, label: 'Problems Solved', value: '134', sub: 'LeetCode + Others', color: '#10b981', trend: true },
-    { icon: FiFileText, label: 'ATS Score', value: '78/100', sub: 'Last resume scan', color: '#f59e0b', trend: false },
-    { icon: FiZap, label: 'Current Streak', value: '12 days 🔥', sub: 'Personal best: 18', color: '#ef4444', trend: true },
-];
-
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
@@ -95,8 +81,42 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function Dashboard() {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
     const [hoveredDay, setHoveredDay] = useState(null);
-    const displayUser = user?.name ? user : mockUser;
+    const [analytics, setAnalytics] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const displayUser = user;
+
+    useEffect(() => {
+        analyticsAPI.track('page_view', '/dashboard');
+        if (user?.id) {
+            sessionsAPI.analytics(user.id, 30)
+                .then(res => setAnalytics(res.data))
+                .catch(() => { })
+                .finally(() => setLoading(false));
+        } else {
+            setLoading(false);
+        }
+    }, [user?.id]);
+
+    const totalSessions = analytics?.total_sessions || 0;
+    const avgScore = analytics?.avg_score || 0;
+    const bestScore = analytics?.best_score || 0;
+    const streakDaysReal = analytics?.streak_days || 0;
+    const dsaCount = analytics?.by_type?.dsa || 0;
+    const mockCount = analytics?.by_type?.mock || 0;
+    const behavioralCount = analytics?.by_type?.behavioral || 0;
+    const resumeCount = analytics?.by_type?.resume || 0;
+
+    const statCards = [
+        { icon: FiTrendingUp, label: 'Avg Score', value: totalSessions ? `${avgScore}/100` : '--', sub: `Best: ${bestScore}`, color: '#6366f1', trend: avgScore > 0, link: '/history' },
+        { icon: FiCode, label: 'DSA Submissions', value: dsaCount || '--', sub: 'Total submitted', color: '#10b981', trend: dsaCount > 0, link: '/dsa' },
+        { icon: FiFileText, label: 'Resume Scans', value: resumeCount || '--', sub: 'ATS analyses run', color: '#f59e0b', trend: false, link: '/resume' },
+        { icon: FiZap, label: 'Streak', value: streakDaysReal ? `${streakDaysReal} days 🔥` : '0 days', sub: `${totalSessions} total sessions`, color: '#ef4444', trend: streakDaysReal > 0, link: '/history' },
+    ];
+
+    // Score trend from analytics
+    const progressData = (analytics?.trend || []).map(t => ({ month: t.date?.slice(5), score: t.avg_score }));
 
     return (
         <div style={{ maxWidth: 1400, margin: '0 auto' }} className="animate-fade">
@@ -108,29 +128,31 @@ export default function Dashboard() {
             }}>
                 <div>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.35rem' }}>
-                        Welcome back, {displayUser.name?.split(' ')[0] || 'User'}! 👋
+                        Welcome back, {displayUser?.name?.split(' ')[0] || 'User'}! 👋
                     </h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        You're on a <span style={{ color: 'var(--warning)', fontWeight: 700 }}>{mockUser.streak}-day streak</span> — keep it up! Your overall score improved by <span style={{ color: 'var(--success)', fontWeight: 700 }}>+4 points</span> this week.
+                        {totalSessions > 0
+                            ? <>You have completed <span style={{ color: 'var(--warning)', fontWeight: 700 }}>{totalSessions} sessions</span> — avg score <span style={{ color: 'var(--success)', fontWeight: 700 }}>{avgScore}/100</span> 📈</>
+                            : <>Start your first practice session to begin tracking your progress! 🚀</>}
                     </p>
                 </div>
-                <div style={{ textAlign: 'center', display: 'none' }}>
-                    <div style={{ fontSize: '3rem' }}>🔥</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{mockUser.streak} days</div>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => navigate('/behavioral')} style={{ padding: '0.6rem 1rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>🎤 Practice</button>
+                    <button onClick={() => navigate('/mock')} style={{ padding: '0.6rem 1rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>🎭 Mock</button>
                 </div>
             </div>
 
             {/* Stats Cards */}
             <div className="grid-4" style={{ marginBottom: '2rem' }}>
-                {statCards.map(({ icon: Icon, label, value, sub, color, trend }) => (
-                    <div key={label} className="card" style={{ cursor: 'default' }}>
+                {statCards.map(({ icon: Icon, label, value, sub, color, trend, link }) => (
+                    <div key={label} className="card" style={{ cursor: 'pointer' }} onClick={() => link && navigate(link)}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                             <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <Icon size={22} style={{ color }} />
                             </div>
                             {trend && <span style={{ fontSize: '0.72rem', color: 'var(--success)', background: 'rgba(16,185,129,0.1)', padding: '0.15rem 0.5rem', borderRadius: 100 }}>↑ Up</span>}
                         </div>
-                        <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>{value}</div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>{loading ? '…' : value}</div>
                         <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.15rem' }}>{label}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{sub}</div>
                     </div>
@@ -199,16 +221,24 @@ export default function Dashboard() {
 
                 {/* Progress Over Time */}
                 <div className="card">
-                    <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>📈 Score Progress</h3>
-                    <ResponsiveContainer width="100%" height={260}>
-                        <LineChart data={progressData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                            <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} domain={[30, 100]} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ fill: '#6366f1', r: 5 }} activeDot={{ r: 7 }} />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>📈 Score Progress (Real Data)</h3>
+                    {progressData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={260}>
+                            <LineChart data={progressData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ fill: '#6366f1', r: 5 }} activeDot={{ r: 7 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div style={{ height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📊</div>
+                            <p>Complete practice sessions to see your score trend</p>
+                            <button onClick={() => navigate('/behavioral')} style={{ marginTop: '0.75rem', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>Start Practicing</button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -247,21 +277,40 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Recent Activity */}
+            {/* Recent Activity — from real sessions */}
             <div className="card">
-                <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>⚡ Recent Activity</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {recentActivity.map((item, i) => (
-                        <div key={i} style={{
-                            display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem',
-                            background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)',
-                        }}>
-                            <span style={{ fontSize: '1.4rem' }}>{item.icon}</span>
-                            <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.text}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{item.time}</span>
-                        </div>
-                    ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontWeight: 700 }}>⚡ Recent Activity</h3>
+                    <button onClick={() => navigate('/history')} style={{ fontSize: '0.8rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>View All →</button>
                 </div>
+                {analytics?.latest && Object.keys(analytics.latest).length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {Object.entries(analytics.latest).map(([type, session]) => {
+                            const icons = { voice: '🎤', behavioral: '💬', dsa: '💻', mock: '🎭', system_design: '🏛️', resume: '📄' };
+                            return (
+                                <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                                    onClick={() => navigate('/history')}>
+                                    <span style={{ fontSize: '1.4rem' }}>{icons[type] || '📝'}</span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 600, textTransform: 'capitalize' }}>{type.replace('_', ' ')} Session</div>
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{(session.question_text || '').slice(0, 70)}{session.question_text?.length > 70 ? '…' : ''}</div>
+                                    </div>
+                                    {session.overall_score != null && <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)' }}>{session.overall_score}/100</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🚀</div>
+                        <p>No sessions yet — start practicing to see your activity here!</p>
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem' }}>
+                            <button onClick={() => navigate('/behavioral')} style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>🎤 Behavioral</button>
+                            <button onClick={() => navigate('/dsa')} style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>💻 DSA</button>
+                            <button onClick={() => navigate('/mock')} style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>🎭 Mock</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

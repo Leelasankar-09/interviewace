@@ -25,6 +25,7 @@ import CodingPlatforms from './pages/CodingPlatforms';
 import Profile from './pages/Profile';
 import QuestionGenerator from './pages/QuestionGenerator';
 import History from './pages/History';
+import Leaderboard from './pages/Leaderboard';
 
 // Protected Route
 const Protected = ({ children }) => {
@@ -76,6 +77,7 @@ function App() {
         <Route path="/profile" element={<Protected><AppLayout><Profile /></AppLayout></Protected>} />
         <Route path="/questions" element={<Protected><AppLayout><QuestionGenerator /></AppLayout></Protected>} />
         <Route path="/history" element={<Protected><AppLayout><History /></AppLayout></Protected>} />
+        <Route path="/leaderboard" element={<Protected><AppLayout><Leaderboard /></AppLayout></Protected>} />
       </Routes>
     </BrowserRouter>
   );

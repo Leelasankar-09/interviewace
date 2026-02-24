@@ -31,5 +31,5 @@ def get_db():
 
 def init_db():
     """Create all tables."""
-    from models import user_model, session_model  # noqa: F401
+    from models import user_model, session_model, analytics_model  # noqa: F401
     Base.metadata.create_all(bind=engine)

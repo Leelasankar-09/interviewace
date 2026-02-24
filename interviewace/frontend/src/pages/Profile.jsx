@@ -1,24 +1,69 @@
-import { useState } from 'react';
-import { FiGithub, FiLinkedin, FiGlobe, FiTwitter, FiEdit2, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { FiGithub, FiLinkedin, FiGlobe, FiEdit2, FiEye, FiEyeOff, FiSave } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import useAuthStore from '../store/authStore';
+import { profileAPI, analyticsAPI } from '../api/services';
 
 export default function Profile() {
     const { user, updateUser } = useAuthStore();
     const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [privacy, setPrivacy] = useState({ college: true, cgpa: false, scores: true, streak: true, email: false });
     const [form, setForm] = useState({
-        name: user?.name || 'Leela Sankar',
-        email: user?.email || 'leela@example.com',
-        bio: 'Aspiring SDE — passionate about DSA and system design. Targeting FAANG.',
-        college: 'NIT Trichy',
-        cgpa: '8.7',
-        targetRole: user?.targetRole || 'Software Engineer',
-        targetCompanies: 'Google, Amazon, Microsoft',
-        linkedin: 'https://linkedin.com/in/leelasankar',
-        github: 'https://github.com/Leelasankar-09',
-        portfolio: 'https://leelasankar.dev',
-        twitter: 'https://twitter.com/leelasankar',
+        name: user?.name || '',
+        email: user?.email || '',
+        bio: '',
+        college: user?.college || '',
+        cgpa: '',
+        target_role: user?.targetRole || '',
+        linkedin: '',
+        github: '',
+        portfolio: '',
     });
+
+    useEffect(() => {
+        analyticsAPI.track('page_view', '/profile');
+        profileAPI.getMe()
+            .then(res => {
+                const p = res.data.profile;
+                setForm(f => ({
+                    ...f,
+                    name: p.name || f.name,
+                    email: p.email || f.email,
+                    bio: p.bio || '',
+                    college: p.college || '',
+                    cgpa: p.cgpa || '',
+                    target_role: p.targetRole || '',
+                    linkedin: p.linkedin || '',
+                    github: p.github || '',
+                    portfolio: p.portfolio || '',
+                }));
+            })
+            .catch(() => { });
+    }, []);
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const res = await profileAPI.updateMe({
+                name: form.name,
+                bio: form.bio,
+                college: form.college,
+                cgpa: form.cgpa,
+                target_role: form.target_role,
+                linkedin: form.linkedin,
+                github: form.github,
+                portfolio: form.portfolio,
+            });
+            updateUser({ name: form.name, targetRole: form.target_role });
+            toast.success('Profile saved!');
+            setEditing(false);
+        } catch {
+            toast.error('Could not save profile.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const togglePrivacy = (key) => setPrivacy(p => ({ ...p, [key]: !p[key] }));
 
@@ -30,16 +75,25 @@ export default function Profile() {
     );
 
     // Profile strength
-    const fields = [form.bio, form.college, form.cgpa, form.targetRole, form.linkedin, form.github, form.portfolio];
+    const fields = [form.bio, form.college, form.cgpa, form.target_role, form.linkedin, form.github, form.portfolio];
     const strength = Math.round((fields.filter(Boolean).length / fields.length) * 100);
 
     return (
         <div className="animate-fade" style={{ maxWidth: 900, margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>👤 My Profile</h2>
-                <button className={editing ? 'btn btn-primary' : 'btn btn-outline'} onClick={() => setEditing(!editing)} style={{ gap: '0.5rem' }}>
-                    <FiEdit2 size={14} /> {editing ? 'Save Profile' : 'Edit Profile'}
-                </button>
+                {editing ? (
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button className="btn btn-outline" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
+                        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ gap: '0.5rem' }}>
+                            <FiSave size={14} /> {saving ? 'Saving…' : 'Save Profile'}
+                        </button>
+                    </div>
+                ) : (
+                    <button className="btn btn-outline" onClick={() => setEditing(true)} style={{ gap: '0.5rem' }}>
+                        <FiEdit2 size={14} /> Edit Profile
+                    </button>
+                )}
             </div>
 
             <div className="grid-2" style={{ alignItems: 'start' }}>
@@ -86,9 +140,8 @@ export default function Profile() {
                         <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>🔗 Social Links</h3>
                         {[
                             { icon: FiLinkedin, key: 'linkedin', label: 'LinkedIn', color: '#0077b5' },
-                            { icon: FiGithub, key: 'github', label: 'GitHub', color: '#333' },
+                            { icon: FiGithub, key: 'github', label: 'GitHub', color: '#6366f1' },
                             { icon: FiGlobe, key: 'portfolio', label: 'Portfolio', color: 'var(--accent)' },
-                            { icon: FiTwitter, key: 'twitter', label: 'Twitter', color: '#1da1f2' },
                         ].map(({ icon: Icon, key, label, color }) => (
                             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                 <Icon size={16} style={{ color, flexShrink: 0 }} />
@@ -114,8 +167,7 @@ export default function Profile() {
                         {[
                             { label: 'College / University', key: 'college', privacyKey: 'college' },
                             { label: 'CGPA', key: 'cgpa', privacyKey: 'cgpa' },
-                            { label: 'Target Role', key: 'targetRole', privacyKey: null },
-                            { label: 'Target Companies', key: 'targetCompanies', privacyKey: null },
+                            { label: 'Target Role', key: 'target_role', privacyKey: null },
                         ].map(({ label, key, privacyKey }) => (
                             <div key={key} style={{ marginBottom: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
