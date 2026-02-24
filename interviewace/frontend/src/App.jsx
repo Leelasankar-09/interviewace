@@ -28,6 +28,7 @@ import Profile from './pages/Profile';
 import QuestionGenerator from './pages/QuestionGenerator';
 import History from './pages/History';
 import Leaderboard from './pages/Leaderboard';
+import Badges from './pages/Badges';
 
 // Protected Route
 const Protected = ({ children }) => {
@@ -82,6 +83,7 @@ function App() {
         <Route path="/questions" element={<Protected><AppLayout><QuestionGenerator /></AppLayout></Protected>} />
         <Route path="/history" element={<Protected><AppLayout><History /></AppLayout></Protected>} />
         <Route path="/leaderboard" element={<Protected><AppLayout><Leaderboard /></AppLayout></Protected>} />
+        <Route path="/badges" element={<Protected><AppLayout><Badges /></AppLayout></Protected>} />
       </Routes>
     </BrowserRouter>
   );

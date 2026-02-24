@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from routers import (
     auth, dsa, behavioral, systemdesign, mock, resume,
-    community, profile, voice, questions, leaderboard,
+    community, profile, voice, questions, leaderboard, badges,
     sessions as sessions_router, analytics as analytics_router
 )
 
@@ -39,7 +39,7 @@ app.mount("/recordings", StaticFiles(directory="recordings"), name="recordings")
 
 # ── Routers ───────────────────────────────────────────────────
 for router in [auth, dsa, behavioral, systemdesign, mock, resume,
-               community, profile, voice, questions, leaderboard,
+               community, profile, voice, questions, leaderboard, badges,
                sessions_router, analytics_router]:
     app.include_router(router.router, prefix="/api")
 

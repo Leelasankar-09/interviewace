@@ -99,3 +99,16 @@ export const questionsAPI = {
     bank: () => api.get('/questions/bank'),
     topics: (type) => api.get('/questions/topics', { params: { type } }),
 };
+
+// ── Badges / Achievements ─────────────────────────────────────────────────────
+export const badgesAPI = {
+    me: () => api.get('/badges/me'),
+    user: (userId) => api.get(`/badges/${userId}`),
+};
+
+// ── Password Reset ────────────────────────────────────────────────────────────
+export const passwordAPI = {
+    forgot: (email) => api.post('/auth/forgot-password', { email }),
+    reset: (token, new_password) => api.post('/auth/reset-password', { token, new_password }),
+    change: (current_password, new_password) => api.post('/auth/change-password', { current_password, new_password }),
+};

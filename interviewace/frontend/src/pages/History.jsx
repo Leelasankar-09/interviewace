@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { FiDownload } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
 import { sessionsAPI, analyticsAPI } from '../api/services';
+import { exportHistoryPDF } from '../utils/pdfExport';
 
 const TYPE_LABELS = {
     voice: '🎙 Voice', behavioral: '💬 Behavioral', dsa: '💻 DSA',
@@ -38,6 +40,8 @@ export default function History() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
+    const [allSessions, setAllSessions] = useState([]); // for PDF export
+    const [exporting, setExporting] = useState(false);
     const LIMIT = 20;
 
     const loadData = async () => {
@@ -54,6 +58,13 @@ export default function History() {
             setSessions(histRes.data.sessions || []);
             setTotal(histRes.data.total || 0);
             if (analyticsRes) setAnalytics(analyticsRes.data);
+            // Eagerly load all sessions for PDF (up to 200)
+            if (page === 1) {
+                try {
+                    const allRes = await sessionsAPI.history({ ...params, page: 1, limit: 200 });
+                    setAllSessions(allRes.data.sessions || []);
+                } catch { /* silent */ }
+            }
         } catch { /* silent */ }
         finally { setLoading(false); }
     };
@@ -90,6 +101,18 @@ export default function History() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                        onClick={async () => {
+                            setExporting(true);
+                            await new Promise(r => setTimeout(r, 50));
+                            exportHistoryPDF(allSessions.length ? allSessions : sessions, analytics, user?.name || 'User');
+                            setExporting(false);
+                        }}
+                        disabled={exporting || sessions.length === 0}
+                        style={{ padding: '0.6rem 1.2rem', borderRadius: '0.75rem', border: '2px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 700, cursor: sessions.length ? 'pointer' : 'not-allowed', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: sessions.length ? 1 : 0.5 }}>
+                        <FiDownload size={14} />
+                        {exporting ? 'Generating…' : 'Download PDF'}
+                    </button>
                     <button onClick={() => navigate('/behavioral')}
                         style={{ padding: '0.6rem 1.2rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
                         + New Session

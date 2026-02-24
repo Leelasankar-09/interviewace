@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 import os, datetime, secrets
 from typing import Optional
+from email_service import send_reset_email
 
 from database import get_db
 from models.user_model import User
@@ -161,12 +162,14 @@ def forgot_password(body: ForgotPasswordInput, db: Session = Depends(get_db)):
 
     reset_url = f"http://localhost:5173/reset-password?token={token}"
 
-    return {
-        "message": "If an account exists with that email, a reset link has been sent.",
-        # NOTE: Remove 'reset_url' below before deploying to production
-        # In production, send this URL via email instead
-        "reset_url": reset_url,
-    }
+    # Try to send real email; if SMTP not configured it logs to console and returns False
+    email_sent = send_reset_email(to_email=user.email, name=user.name, reset_token=token)
+
+    response = {"message": "If an account exists with that email, a reset link has been sent."}
+    if not email_sent:
+        # DEV ONLY — expose link directly when email is not configured
+        response["reset_url"] = reset_url
+    return response
 
 # ── Reset Password ─────────────────────────────────────────────
 @router.post("/reset-password")
