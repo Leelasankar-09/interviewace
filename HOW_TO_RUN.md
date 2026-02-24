@@ -36,9 +36,22 @@ JWT_SECRET=any-long-random-string
 
 ### Step 5 — Run the backend
 ```powershell
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 # API docs at http://localhost:8000/docs
 ```
+
+---
+
+## 🐋 Docker (Recommended for Production Simulation)
+
+Assuming you have Docker installed:
+
+```powershell
+docker-compose up --build
+```
+- Backend will be at: `http://localhost:8000`
+- Frontend will be at: `http://localhost:3000`
+- Redis & Postgres will be started automatically.
 
 ---
 

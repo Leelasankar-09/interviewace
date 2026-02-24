@@ -13,6 +13,15 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
+        primary: 'var(--bg-primary)',
+        secondary: 'var(--bg-secondary)',
+        card: 'var(--bg-card)',
+        accent: 'var(--accent)',
+        'accent-2': 'var(--accent-2)',
+        'accent-3': 'var(--accent-3)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'border-dim': 'var(--border)',
         terracotta: {
           DEFAULT: '#c2410c',
           50: '#fff7ed',

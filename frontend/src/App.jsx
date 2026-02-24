@@ -9,28 +9,28 @@ import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 
 // Pages
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Dashboard from './pages/Dashboard';
-import DSA from './pages/DSA';
-import Behavioral from './pages/Behavioral';
-import SystemDesign from './pages/SystemDesign';
-import MockInterview from './pages/MockInterview';
-import ResumeATS from './pages/ResumeATS';
-import Community from './pages/Community';
-import Roles from './pages/Roles';
-import RoleDetail from './pages/RoleDetail';
-import VoiceEval from './pages/VoiceEval';
-import CodingPlatforms from './pages/CodingPlatforms';
-import Profile from './pages/Profile';
-import QuestionGenerator from './pages/QuestionGenerator';
-import History from './pages/History';
-import Leaderboard from './pages/Leaderboard';
-import Badges from './pages/Badges';
-import TextEval from './pages/TextEval';
-import EvaluationReport from './pages/EvaluationReport';
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import Dashboard from './pages/dashboard/Dashboard';
+import DSA from './pages/practice/DSA';
+import Behavioral from './pages/practice/Behavioral';
+import SystemDesign from './pages/practice/SystemDesign';
+import MockInterview from './pages/practice/MockInterview';
+import ResumeATS from './pages/resume/ResumeATS';
+import Community from './pages/community/Community';
+import Roles from './pages/practice/Roles';
+import RoleDetail from './pages/practice/RoleDetail';
+import VoiceEval from './pages/practice/VoiceEval';
+import CodingPlatforms from './pages/practice/CodingPlatforms';
+import Profile from './pages/profile/Profile';
+import QuestionGenerator from './pages/practice/QuestionGenerator';
+import History from './pages/dashboard/History';
+import Leaderboard from './pages/dashboard/Leaderboard';
+import Badges from './pages/dashboard/Badges';
+import TextEval from './pages/practice/TextEval';
+import EvaluationReport from './pages/reports/EvaluationReport';
 
 // Protected Route
 const Protected = ({ children }) => {

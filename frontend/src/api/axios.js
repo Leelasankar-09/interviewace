@@ -13,12 +13,33 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Handle 401 globally
+// Handle 401 globally with refresh logic
 api.interceptors.response.use(
     (res) => res,
-    (err) => {
-        if (err.response?.status === 401) {
-            localStorage.removeItem('interviewace-auth');
+    async (err) => {
+        const originalRequest = err.config;
+
+        if (err.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            // Logic to trigger refreshSession from AuthStore
+            try {
+                // Dynamically import to avoid circular dependency
+                const { default: useAuthStore } = await import('../store/authStore');
+                const refreshed = await useAuthStore.getState().refreshSession();
+
+                if (refreshed) {
+                    const newToken = useAuthStore.getState().token;
+                    originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                    return api(originalRequest);
+                }
+            } catch (refreshErr) {
+                console.error("Session refresh failed", refreshErr);
+            }
+
+            // If refresh fails, final logout
+            const { default: useAuthStore } = await import('../store/authStore');
+            useAuthStore.getState().logout();
             window.location.href = '/login';
         }
         return Promise.reject(err);
