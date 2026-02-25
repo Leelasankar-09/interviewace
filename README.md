@@ -1,154 +1,69 @@
-<div align="center">
+# 🎯 InterviewAce - Production Ready AI Interview Platform
 
-# 🎯 InterviewAce
+**InterviewAce** is a professional-grade, full-stack AI-powered platform designed to prepare engineering candidates for top-tier tech interviews. Leveraging **FastAPI**, **React**, and **Anthropic Claude 3.5 Sonnet**, it provides real-time, deep technical and behavioral evaluations.
 
-**AI-powered interview preparation platform for engineering candidates**
+## ✨ Core Features
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+| Feature | Description |
+| :--- | :--- |
+| 🎙️ **Behavioral Lab** | STAR methodology analysis with real-time Speech-to-Text (STT) support. |
+| 💻 **DSA Console** | Monaco Editor integration with AI-powered code review and complexity analysis. |
+| 🏛️ **System Design** | Architecture tradeoff evaluations and deep technical vetting. |
+| 📄 **Resume ATS** | Industrial-strength parser to score and optimize your resume for recruiters. |
+| 📊 **Analytics** | Detailed 12-parameter scoring, streak tracking, and skill radar charts. |
+| 📋 **Interview Tracker** | Full Kanban pipeline to manage your applications from "Applied" to "Offer". |
+| 🗣️ **Vocab Coach** | AI sentence tuner to upgrade your technical and leadership vocabulary. |
+| 🏢 **Company Prep** | Data-driven insights into the interview patterns of top tech firms (FAANG). |
+| 👥 **Forum** | Reddit-style technical discussion and experience-sharing community. |
 
-> Practice DSA, behavioral, and system design interviews with real-time AI feedback, analytics, and leaderboards.
+## 🛠️ Tech Stack
 
-</div>
+- **Frontend:** React 18, Vite, TailwindCSS, Framer Motion, Recharts, Monaco Editor.
+- **Backend:** FastAPI (Strict MVC Architecture), SQLAlchemy, Pydantic.
+- **Database:** PostgreSQL 15, Alembic Migrations.
+- **Cache:** Redis 7 (Caching AI responses & Rate limiting).
+- **AI Engine:** Anthropic Claude 3.5 Sonnet.
+- **Deployment:** Render (Backend), Vercel (Frontend), Docker Desktop (Local).
 
----
+## 🚀 Quick Start (Local Docker)
 
-## ✨ Features
+The entire platform is containerized for a single-command setup on Windows.
 
-| Module | Description |
-|---|---|
-| 🔐 **JWT Authentication** | Secure register/login with 30-day tokens |
-| 🔑 **Forgot Password** | Secure token-based password reset flow |
-| 💬 **Behavioral Interviews** | AI evaluates STAR structure, filler words & sentiment |
-| 💻 **DSA Practice** | Problem bank with AI code review + complexity analysis |
-| 🎭 **Mock Interviews** | End-to-end interview simulation with streaming AI |
-| 🗣️ **Voice Evaluation** | Real-time speech analysis — pace, clarity, fillers |
-| 📄 **Resume ATS Analyzer** | PDF/DOCX resume scored against job descriptions |
-| 🏆 **Leaderboard** | Ranked by score + streak, filterable by college |
-| 📊 **Analytics Dashboard** | Streak calendar, score trends, per-section breakdown |
-| 👤 **Profile** | Name, college, CGPA, LinkedIn, GitHub — saved to DB |
-| 📚 **History** | Paginated session history with trend charts |
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Leelasankar-09/interviewace.git
+   cd interviewace
+   ```
 
----
+2. **Configure Environment:**
+   ```bash
+   copy .env.example .env
+   # Open .env and add your ANTHROPIC_API_KEY
+   ```
 
-## 🚀 Quick Start
+3. **Launch with Docker:**
+   ```bash
+   docker-compose up --build
+   ```
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- An [Anthropic API key](https://console.anthropic.com)
+- **App:** [http://localhost:5173](http://localhost:5173)
+- **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health:** [http://localhost:8000/health](http://localhost:8000/health)
 
-### 1. Clone the repo
-```bash
-git clone https://github.com/Leela-Sankar-09/interviewace.git
-cd interviewace
-```
+## 🏛️ Architecture (Strict MVC)
 
-### 2. Backend setup
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS/Linux
+The project follows a rigorous separation of concerns:
+- **Routes:** `app/routes/` - API Endpoints.
+- **Controllers:** `app/controllers/` - Business logic and orchestration.
+- **Repositories:** `app/repositories/` - Direct DB interactions (DRY).
+- **Services:** `app/services/` - AI calls, file parsing, and caching.
+- **Models/Schemas:** `app/models/` & `app/schemas/` - Data integrity.
 
-pip install -r requirements.txt
+## 🚢 Deployment
 
-# Create .env file
-echo JWT_SECRET=your-super-secret-key > .env
-echo ANTHROPIC_API_KEY=sk-ant-... >> .env
-
-python -m uvicorn main:app --reload --port 8000
-```
-
-### 3. Frontend setup
-```bash
-cd frontend
-npm install
-
-# Create .env file
-echo VITE_API_URL=http://localhost:8000/api > .env
-
-npm run dev
-```
-
-Open **http://localhost:5173** 🎉
+- **Backend:** Hosted on **Render** (pip install + gunicorn).
+- **Frontend:** Hosted on **Vercel** (npm build).
+- **CI/CD:** Automated via **GitHub Actions** (`.github/workflows/deploy.yml`).
 
 ---
-
-## 🏗️ Architecture
-
-```
-interviewace/
-├── backend/
-│   ├── main.py               # FastAPI app, CORS, startup
-│   ├── database.py           # SQLAlchemy engine + Base
-│   ├── models/
-│   │   ├── user_model.py     # User (name, email, college, CGPA…)
-│   │   ├── session_model.py  # InterviewSession, PracticeStreak
-│   │   └── analytics_model.py
-│   └── routers/
-│       ├── auth.py           # JWT auth + forgot/reset password
-│       ├── sessions.py       # Unified history & analytics
-│       ├── leaderboard.py    # Ranked user board
-│       ├── behavioral.py     # STAR + NLP evaluation
-│       ├── dsa.py            # Problem bank + AI code review
-│       ├── mock.py           # Full mock interview
-│       ├── resume.py         # ATS scoring
-│       └── profile.py        # User profile CRUD
-└── frontend/
-    ├── src/
-    │   ├── api/
-    │   │   ├── axios.js      # Axios instance + auth interceptor
-    │   │   └── services.js   # All API functions
-    │   ├── store/
-    │   │   ├── authStore.js  # Zustand auth state
-    │   │   └── themeStore.js
-    │   ├── pages/            # 15+ pages
-    │   └── components/       # Sidebar, Topbar, charts
-    └── vite.config.js
-```
-
----
-
-## 🔒 Security
-
-- Passwords hashed with **bcrypt** (passlib)
-- JWT tokens signed with HS256, configurable expiry
-- Password reset tokens are cryptographically random, expire in **30 minutes**, and are single-use
-- No sensitive data stored in localStorage — tokens only
-- CORS restricted to known origins in production
-
----
-
-## 🌐 Environment Variables
-
-| Variable | Where | Description |
-|---|---|---|
-| `JWT_SECRET` | backend `.env` | Secret for signing JWTs |
-| `ANTHROPIC_API_KEY` | backend `.env` | Claude AI API key |
-| `VITE_API_URL` | frontend `.env` | Backend base URL |
-
----
-
-## 📈 Roadmap
-
-- [ ] Email integration for password reset (SMTP/SendGrid)
-- [ ] Badge & achievement system
-- [ ] PDF report export
-- [ ] Peer mock interview matching
-- [ ] Docker Compose for one-command deployment
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome! Please open an issue first to discuss the change.
-
----
-
-## 📄 License
-
-MIT © 2025 [Leela Sankar Reddy](https://github.com/Leela-Sankar-09)
+Developed with ❤️ by **Leelasankar** for 2025 Interview Readiness.
