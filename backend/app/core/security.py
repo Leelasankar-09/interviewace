@@ -14,11 +14,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_ctx.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict) -> str:
-    exp = datetime.datetime.utcnow() + datetime.timedelta(minutes=settings.JWT_ACCESS_EXPIRE_MINUTES)
+    exp = datetime.datetime.utcnow() + datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode({**data, "exp": exp, "type": "access"}, SECRET, algorithm=ALGORITHM)
 
 def create_refresh_token(data: dict) -> str:
-    exp = datetime.datetime.utcnow() + datetime.timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS)
+    exp = datetime.datetime.utcnow() + datetime.timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     return jwt.encode({**data, "exp": exp, "type": "refresh"}, SECRET, algorithm=ALGORITHM)
 
 def create_verification_token(data: dict) -> str:
@@ -31,7 +31,6 @@ def create_reset_token(data: dict) -> str:
 
 def decode_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-        return payload
+        return jwt.decode(token, SECRET, algorithms=[ALGORITHM])
     except JWTError:
         return None

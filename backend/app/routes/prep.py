@@ -1,13 +1,27 @@
 # app/routes/prep.py
-from fastapi import APIRouter, Depends
-from app.services.ai_service import ai_service
-from app.routes.auth import get_current_user
-from app.models.user_model import User
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.controllers.prep_controller import PrepController
+from app.core.dependencies import get_current_user
 
-router = APIRouter(prefix="/prep", tags=["prep"])
+router = APIRouter(prefix="/prep", tags=["Preparation"])
 
-@router.get("/company/{company_name}")
-async def get_company_prep(company_name: str, current_user: User = Depends(get_current_user)):
-    # role defaults to the user's target role or "Software Engineer"
-    role = current_user.target_role or "Software Engineer"
-    return await ai_service.get_company_preparation(company_name, role)
+@router.get("/company")
+async def get_company_prep(
+    company: str = Query(...),
+    role: str = Query("Software Engineer"),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    controller = PrepController(db)
+    return await controller.get_company_prep_data(company, role)
+
+@router.post("/questions/generate")
+async def generate_questions(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    controller = PrepController(db)
+    return await controller.generate_questions(data)

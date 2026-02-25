@@ -1,14 +1,18 @@
+# app/core/database.py
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
 import redis
+import logging
 from .config import settings
 
 DATABASE_URL = settings.DATABASE_URL
 REDIS_URL    = settings.REDIS_URL
 
+# Default logger for database module
+logger = logging.getLogger(__name__)
+
 # Database Engine
-# pool_size and max_overflow are important for PostgreSQL concurrency
 engine_args = {
     "poolclass": QueuePool,
     "pool_size": 10,
@@ -29,33 +33,20 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Redis Client with Graceful Fallback
 try:
     redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-    # Optional: Quick check to see if it's alive
-    # redis_client.ping() 
+    redis_client.ping()
 except Exception:
-    import logging
-    logging.getLogger(__name__).warning("Redis connection failed. Using MockRedis fallback.")
+    logger.warning("Redis connection failed. Using MockRedis fallback.")
     class MockRedis:
         def get(self, *args, **kwargs): return None
         def set(self, *args, **kwargs): return True
         def delete(self, *args, **kwargs): return True
         def exists(self, *args, **kwargs): return False
-        def keys(self, *args, **kwargs): return []
-        def flushdb(self, *args, **kwargs): return True
+        def pipeline(self): return self
+        def incr(self, *args, **kwargs): return 1
+        def expire(self, *args, **kwargs): return True
+        def execute(self): return []
     redis_client = MockRedis()
 
-class Base(DeclarativeBase):
-    pass
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def get_redis():
-    return redis_client
-
 def init_db():
-    from app.models import user_model, session_model, analytics_model  # noqa: F401
+    from app.models import Base  # noqa: F401
     Base.metadata.create_all(bind=engine)

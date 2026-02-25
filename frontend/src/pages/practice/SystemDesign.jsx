@@ -1,183 +1,174 @@
-import { useState, useEffect } from 'react';
+// src/pages/practice/SystemDesign.jsx
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    FiLayers, FiChevronLeft, FiSend, FiLayout, FiDatabase,
+    FiServer, FiCpu, FiTrendingUp, FiArrowRight
+} from 'react-icons/fi';
+import api from '../../api/axios';
 import { toast } from 'react-toastify';
-import { mockAPI, analyticsAPI } from '../api/services';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TOPICS = [
-    { id: 'url-shortener', title: 'URL Shortener', icon: '🔗', difficulty: 'Medium', companies: ['Google', 'Meta'] },
-    { id: 'rate-limiter', title: 'Rate Limiter', icon: '🚦', difficulty: 'Medium', companies: ['Uber', 'Stripe'] },
-    { id: 'instagram', title: 'Design Instagram', icon: '📸', difficulty: 'Hard', companies: ['Meta', 'Google'] },
-    { id: 'uber', title: 'Design Uber', icon: '🚗', difficulty: 'Hard', companies: ['Uber', 'Lyft'] },
-    { id: 'whatsapp', title: 'Design WhatsApp', icon: '💬', difficulty: 'Hard', companies: ['Meta', 'Microsoft'] },
-    { id: 'youtube', title: 'Design YouTube', icon: '▶️', difficulty: 'Hard', companies: ['Google', 'Netflix'] },
-    { id: 'notification', title: 'Notification System', icon: '🔔', difficulty: 'Medium', companies: ['Amazon', 'Airbnb'] },
-    { id: 'search', title: 'Search Autocomplete', icon: '🔍', difficulty: 'Medium', companies: ['Google', 'LinkedIn'] },
+    { id: 'url-shortener', title: 'URL Shortener', difficulty: 'Medium', icon: <FiLayers />, companies: ['Google', 'Meta'] },
+    { id: 'rate-limiter', title: 'Rate Limiter', difficulty: 'Medium', icon: <FiServer />, companies: ['Uber', 'Stripe'] },
+    { id: 'instagram', title: 'Instagram Feed', difficulty: 'Hard', icon: <FiLayout />, companies: ['Meta', 'Googl'] },
+    { id: 'uber', title: 'Uber Backend', difficulty: 'Hard', icon: <FiTrendingUp />, companies: ['Uber', 'Lyft'] },
+    { id: 'youtube', title: 'YouTube Architecture', difficulty: 'Hard', icon: <FiDatabase />, companies: ['Google', 'Netflix'] },
+    { id: 'search', title: 'Autocomplete Search', difficulty: 'Medium', icon: <FiCpu />, companies: ['Google', 'LinkedIn'] },
 ];
-
-const QUESTION_MAP = {
-    'url-shortener': 'Design a URL shortener like bit.ly that can handle 100M URLs and 10B redirects per day.',
-    'rate-limiter': 'Design a distributed rate limiter that can handle 10,000 requests per second.',
-    'instagram': 'Design Instagram — photo sharing, feeds, stories, and recommendations at scale.',
-    'uber': 'Design the Uber backend — ride matching, real-time location tracking, pricing at scale.',
-    'whatsapp': 'Design WhatsApp — end-to-end encrypted messaging for 2 billion users.',
-    'youtube': 'Design YouTube — video upload, processing, storage, and global streaming delivery.',
-    'notification': 'Design a notification system that can send 1M notifications per minute across email, SMS, and push.',
-    'search': 'Design a Google search autocomplete / typeahead system.',
-};
-
-const FRAMEWORKS = ['CAP Theorem', 'Load Balancing', 'Caching (Redis)', 'Databases (SQL vs NoSQL)', 'Microservices', 'Message Queues', 'CDN', 'Sharding'];
 
 export default function SystemDesign() {
     const navigate = useNavigate();
     const [selected, setSelected] = useState(null);
-    const [phase, setPhase] = useState('list'); // list | design | done
-    const [notes, setNotes] = useState('');
-    const [saving, setSaving] = useState(false);
+    const [answer, setAnswer] = useState('');
+    const [isEvaluating, setIsEvaluating] = useState(false);
     const [filter, setFilter] = useState('All');
 
-    useEffect(() => {
-        analyticsAPI.track('page_view', '/system-design');
-    }, []);
+    const handleEvaluate = async () => {
+        if (answer.trim().length < 50) {
+            toast.warn("Please provide more detail for evaluation");
+            return;
+        }
 
-    const startDesign = (topic) => {
-        setSelected(topic);
-        setNotes('');
-        setPhase('design');
-        analyticsAPI.track('feature_use', '/system-design', 'start_design', { topic: topic.id });
-    };
-
-    const submitDesign = async () => {
-        if (!notes.trim()) { toast.warning('Write your design before submitting'); return; }
-        setSaving(true);
+        setIsEvaluating(true);
         try {
-            await mockAPI.save({
-                question_text: QUESTION_MAP[selected.id] || selected.title,
-                answer_text: notes,
-                round_type: 'System Design',
-                role_tag: 'Software Engineer',
+            const res = await api.post('/evaluation/submit', {
+                question: selected.title,
+                answer: answer,
+                type: 'system-design'
             });
-            toast.success('Design saved to your history!');
-            setPhase('done');
-        } catch { toast.error('Could not save design.'); }
-        finally { setSaving(false); }
+            toast.success("Design Evaluated!");
+            navigate(`/evaluation/${res.data.id}`);
+        } catch (error) {
+            toast.error("Evaluation failed");
+        } finally {
+            setIsEvaluating(false);
+        }
     };
 
-    const ds = (d) => d === 'Hard' ? '#ef4444' : d === 'Medium' ? '#f59e0b' : '#22c55e';
     const filtered = filter === 'All' ? TOPICS : TOPICS.filter(t => t.difficulty === filter);
 
-    if (phase === 'design') return (
-        <div className="animate-fade" style={{ maxWidth: 900, margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div>
-                    <button onClick={() => setPhase('list')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '0.5rem', padding: 0 }}>← Back</button>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{selected.icon} {selected.title}</h2>
-                    <span style={{ fontSize: '0.85rem', color: ds(selected.difficulty), fontWeight: 700 }}>{selected.difficulty}</span>
-                </div>
-                <button onClick={submitDesign} disabled={saving}
-                    style={{ padding: '0.75rem 1.5rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
-                    {saving ? 'Saving…' : '✅ Submit Design'}
+    if (selected) return (
+        <div className="max-w-6xl mx-auto animate-fade">
+            <div className="flex items-center gap-4 mb-10 overflow-hidden">
+                <button
+                    onClick={() => setSelected(null)}
+                    className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-text-muted transition-all"
+                >
+                    <FiChevronLeft size={20} />
                 </button>
+                <div>
+                    <h2 className="text-2xl font-bold">{selected.title}</h2>
+                    <p className="text-[10px] text-text-muted font-black uppercase tracking-widest">{selected.difficulty} DESIGN CHALLENGE</p>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1.5rem' }}>
-                <div>
-                    {/* Question */}
-                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>📋 Problem Statement</h3>
-                        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>{QUESTION_MAP[selected.id]}</p>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 space-y-6">
+                    <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-10">
+                        <h4 className="text-sm font-bold mb-4 opacity-50">Problem Requirements</h4>
+                        <p className="text-lg text-white leading-relaxed mb-10">
+                            Design a highly available and scalable {selected.title}. Focus on horizontal scaling, consistency vs availability tradeoffs, and choose appropriate storage solutions.
+                        </p>
 
-                    {/* Design Area */}
-                    <div className="card" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>✏️ Your Design</h3>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={18}
-                            placeholder={`Cover:
-• Requirements (functional & non-functional)
-• High-level architecture / components
-• Database schema & choices
-• APIs / endpoints
-• Scaling & bottlenecks
-• Trade-offs and assumptions`}
-                            style={{ width: '100%', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', resize: 'vertical', fontSize: '0.95rem', lineHeight: 1.6, fontFamily: 'inherit' }} />
+                        <div className="space-y-4">
+                            <label className="text-xs font-bold text-text-muted uppercase tracking-widest ml-1">Your Proposed Architecture</label>
+                            <textarea
+                                value={answer}
+                                onChange={e => setAnswer(e.target.value)}
+                                placeholder="Describe your components (LB, Cache, DB), API design, and scaling strategy..."
+                                className="w-full h-96 bg-white/[0.03] border border-white/10 rounded-3xl p-8 text-lg focus:border-indigo-500/50 outline-none transition-all resize-none"
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleEvaluate}
+                            disabled={isEvaluating}
+                            className="w-full btn btn-primary py-5 rounded-2xl mt-10 text-lg group"
+                        >
+                            {isEvaluating ? <div className="spinner mr-2" /> : <FiSend className="mr-2" />}
+                            {isEvaluating ? 'AI is Architecting...' : 'Submit for System Review'}
+                            <FiArrowRight className="ml-2 group-hover:translate-x-1" />
+                        </button>
                     </div>
                 </div>
 
-                {/* Sidebar */}
-                <div>
-                    <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
-                        <h4 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>🏢 Common Companies</h4>
-                        {selected.companies.map(c => (
-                            <div key={c} style={{ padding: '0.4rem 0.75rem', background: 'var(--bg-secondary)', borderRadius: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>{c}</div>
-                        ))}
+                <div className="space-y-6">
+                    <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-white/5 rounded-3xl p-8">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6">Review Parameters</h4>
+                        <div className="space-y-4">
+                            <ParameterItem label="Scalability" />
+                            <ParameterItem label="High Availability" />
+                            <ParameterItem label="Data Consistency" />
+                            <ParameterItem label="Latency Control" />
+                            <ParameterItem label="Security" />
+                        </div>
                     </div>
-                    <div className="card" style={{ padding: '1.5rem' }}>
-                        <h4 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>🔧 Key Concepts</h4>
-                        {FRAMEWORKS.map(f => (
-                            <div key={f} style={{ padding: '0.4rem 0.75rem', borderLeft: '3px solid var(--accent)', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{f}</div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 
-    if (phase === 'done') return (
-        <div className="animate-fade" style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-            <div className="card" style={{ padding: '3rem' }}>
-                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏛️</div>
-                <h2 style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Design Saved!</h2>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Your system design for <strong>{selected.title}</strong> has been saved.</p>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                    <button onClick={() => setPhase('list')} style={{ padding: '0.85rem 1.5rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer' }}>
-                        🔄 Try Another
-                    </button>
-                    <button onClick={() => navigate('/history')} style={{ padding: '0.85rem 1.5rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
-                        📚 View History
-                    </button>
+                    <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-text-muted mb-4">Companies</h4>
+                        <div className="flex flex-wrap gap-2">
+                            {selected.companies.map(c => (
+                                <span key={c} className="px-2 py-1 bg-white/5 rounded-lg text-[10px] font-bold text-text-secondary">{c}</span>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     );
 
     return (
-        <div className="animate-fade" style={{ maxWidth: 1100, margin: '0 auto' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>🏛️ System Design</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Design large-scale systems used at top tech companies</p>
+        <div className="max-w-6xl mx-auto animate-fade">
+            <div className="mb-12 space-y-4">
+                <h2 className="text-4xl font-bold">System Design Arena</h2>
+                <p className="text-text-secondary">Architect large-scale solutions and get rigorous AI feedback on tradeoffs.</p>
 
-            {/* Filter */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                {['All', 'Medium', 'Hard'].map(f => (
-                    <button key={f} onClick={() => setFilter(f)}
-                        style={{
-                            padding: '0.5rem 1.25rem', borderRadius: '2rem', border: '2px solid', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-                            borderColor: filter === f ? 'var(--accent)' : 'var(--border)',
-                            background: filter === f ? 'var(--accent)' : 'transparent',
-                            color: filter === f ? '#fff' : 'var(--text-primary)'
-                        }}>
-                        {f}
+                <div className="flex gap-2 pt-4">
+                    {['All', 'Medium', 'Hard'].map(f => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${filter === f ? 'bg-indigo-500 text-white' : 'bg-white/5 text-text-muted hover:bg-white/10'}`}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filtered.map(t => (
+                    <button
+                        key={t.id}
+                        onClick={() => setSelected(t)}
+                        className="bg-white/5 border border-white/5 p-8 rounded-[2.5rem] text-left hover:bg-white/[0.08] hover:border-indigo-500/30 transition-all group"
+                    >
+                        <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-2xl text-text-muted group-hover:text-indigo-400 transition-colors mb-6">
+                            {t.icon}
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">{t.title}</h3>
+                        <div className="flex items-center justify-between mt-6">
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${t.difficulty === 'Hard' ? 'text-pink-400' : 'text-amber-400'}`}>
+                                {t.difficulty}
+                            </span>
+                            <div className="flex -space-x-2">
+                                {[1, 2].map(i => <div key={i} className="w-5 h-5 rounded-full border-2 border-bg-card bg-indigo-500" />)}
+                            </div>
+                        </div>
                     </button>
                 ))}
             </div>
+        </div>
+    );
+}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                {filtered.map(t => (
-                    <div key={t.id} className="card" onClick={() => startDesign(t)}
-                        style={{ padding: '1.5rem', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                            <span style={{ fontSize: '2.5rem' }}>{t.icon}</span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: ds(t.difficulty), background: ds(t.difficulty) + '20', padding: '0.25rem 0.6rem', borderRadius: '1rem' }}>{t.difficulty}</span>
-                        </div>
-                        <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{t.title}</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {t.companies.map(c => (
-                                <span key={c} style={{ fontSize: '0.75rem', background: 'var(--bg-secondary)', padding: '0.2rem 0.5rem', borderRadius: '0.4rem', color: 'var(--text-muted)' }}>{c}</span>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
+function ParameterItem({ label }) {
+    return (
+        <div className="flex items-center gap-3">
+            <FiCheckCircle className="text-emerald-500" size={14} />
+            <span className="text-xs text-text-secondary font-medium">{label}</span>
         </div>
     );
 }

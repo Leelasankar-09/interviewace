@@ -1,21 +1,16 @@
 import os
 import json
 import logging
+import hashlib
 from typing import Optional, Dict, Any
 from anthropic import Anthropic
-from .nlp_service import evaluate_answer as local_nlp_eval
-
-logger = logging.getLogger(__name__)
-
-from anthropic import Anthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
+
 from .nlp_service import evaluate_answer as local_nlp_eval
-
-logger = logging.getLogger(__name__)
-
 from app.utils import prompt_templates
 from app.core.database import get_redis
-import hashlib
+
+logger = logging.getLogger(__name__)
 
 class AIService:
     def __init__(self):

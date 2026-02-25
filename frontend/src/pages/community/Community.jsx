@@ -1,132 +1,259 @@
-import { useState } from 'react';
-import { FiThumbsUp, FiMessageCircle, FiTrendingUp, FiPlus, FiX } from 'react-icons/fi';
-
-const posts = [
-    { id: 1, author: 'Priya S.', college: 'IIT Bombay', company: 'Google', role: 'SDE-2', round: 'Technical Round 1', flair: 'Got Offer ✅', title: 'Google L4 — Dynamic Programming hard question asked!', body: 'They asked me to find the minimum number of coins to make change. After that asked a follow-up for unbounded knapsack. Then moved to system design...', tags: ['DP', 'Arrays', 'Google'], upvotes: 142, comments: 23, time: '2h ago' },
-    { id: 2, author: 'Rahul M.', college: null, company: 'Amazon', role: 'SDE-1', round: 'System Design Round', flair: 'Rejected ❌', title: 'Amazon SDE-1 System Design — Tips from my experience', body: 'They asked to design a URL shortener. Focus on: scalability, consistent hashing, database choice. I forgot to mention rate limiting which cost me...', tags: ['System Design', 'Amazon', 'URL Shortener'], upvotes: 89, comments: 41, time: '5h ago' },
-    { id: 3, author: 'Ananya K.', college: 'NIT Trichy', company: 'Microsoft', role: 'SDE-1', round: 'HR Round', flair: 'Got Offer ✅', title: 'Microsoft HR Round — What they really look for', body: 'They focus heavily on "growth mindset" and "learn it all not know it all". Be ready with stories about learning something new quickly. STAR method is a must!', tags: ['HR', 'Microsoft', 'Behavioral'], upvotes: 201, comments: 55, time: '1d ago' },
-    { id: 4, author: 'Dev P.', college: null, company: 'Flipkart', role: 'SDE-2', round: 'Manager Round', flair: 'Ongoing 🔄', title: 'Flipkart Manager round — How to handle leadership questions?', body: 'The manager round was intense. They asked about conflict resolution, a time I had to handle a difficult team member, and my 5-year vision. Tips inside...', tags: ['Manager', 'Leadership', 'Flipkart'], upvotes: 67, comments: 18, time: '2d ago' },
-];
-
-const companies = ['All', 'Google', 'Amazon', 'Microsoft', 'Flipkart', 'Swiggy', 'Zomato'];
-const rounds = ['All', 'Technical Round 1', 'Technical Round 2', 'System Design Round', 'HR Round', 'Manager Round', 'Bar Raiser'];
+// src/pages/community/Community.jsx
+import { useState, useEffect } from 'react';
+import {
+    FiThumbsUp, FiMessageCircle, FiPlus, FiX, FiFilter,
+    FiHash, FiUser, FiActivity, FiGlobe, FiChevronUp, FiChevronDown
+} from 'react-icons/fi';
+import api from '../../api/axios';
+import { toast } from 'react-toastify';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Community() {
-    const [filter, setFilter] = useState({ company: 'All', round: 'All' });
-    const [votes, setVotes] = useState({});
-    const [showPost, setShowPost] = useState(false);
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState({ company: '', round_type: '' });
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newPost, setNewPost] = useState({ title: '', body: '', company: '', role: '', round_type: '', flair: 'Ongoing 🔄' });
 
-    const filtered = posts.filter(p =>
-        (filter.company === 'All' || p.company === filter.company) &&
-        (filter.round === 'All' || p.round === filter.round)
-    );
+    useEffect(() => {
+        fetchPosts();
+    }, [filter]);
+
+    const fetchPosts = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/community/posts', { params: filter });
+            setPosts(res.data.posts);
+        } catch (err) {
+            toast.error("Failed to load forum");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVote = async (id, voteType) => {
+        try {
+            const res = await api.post(`/community/posts/${id}/vote`, { vote_type: voteType });
+            setPosts(posts.map(p => p.id === id ? { ...p, upvotes: res.data.upvotes, downvotes: res.data.downvotes } : p));
+        } catch (err) {
+            toast.error("Login to vote");
+        }
+    };
+
+    const handleCreatePost = async () => {
+        if (!newPost.title || !newPost.body) return;
+        try {
+            await api.post('/community/posts', newPost);
+            toast.success("Experience Shared!");
+            setShowCreateModal(false);
+            fetchPosts();
+        } catch (err) {
+            toast.error("Failed to create post");
+        }
+    };
 
     return (
-        <div className="animate-fade" style={{ maxWidth: 900, margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>🌐 Community Forum</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Share and discover real interview experiences</p>
+        <div className="max-w-5xl mx-auto animate-fade pb-20">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+                <div className="space-y-1">
+                    <h2 className="text-3xl font-bold tracking-tight">Community Forum</h2>
+                    <p className="text-text-secondary text-sm">Real interview experiences from fellow candidates.</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowPost(true)} style={{ gap: '0.5rem' }}>
-                    <FiPlus /> Share Experience
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="btn btn-primary px-8 py-4 rounded-2xl shadow-glow"
+                >
+                    <FiPlus /> Share Your Story
                 </button>
             </div>
 
-            {/* Filters */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {companies.map(c => (
-                        <button key={c} onClick={() => setFilter({ ...filter, company: c })}
-                            className={`btn ${filter.company === c ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ padding: '0.35rem 0.8rem', fontSize: '0.78rem' }}>{c}</button>
-                    ))}
-                </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                {rounds.map(r => (
-                    <button key={r} onClick={() => setFilter({ ...filter, round: r })}
-                        className={`btn ${filter.round === r ? 'btn-outline' : 'btn-ghost'}`}
-                        style={{ padding: '0.35rem 0.8rem', fontSize: '0.75rem' }}>{r}</button>
-                ))}
-            </div>
-
-            {/* Posts */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {filtered.map(post => {
-                    const voted = votes[post.id];
-                    return (
-                        <div key={post.id} className="card" style={{ cursor: 'pointer' }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                            <div style={{ display: 'flex', gap: '1.25rem' }}>
-                                {/* Vote */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
-                                    <button onClick={() => setVotes({ ...votes, [post.id]: voted === 'up' ? null : 'up' })}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: voted === 'up' ? 'var(--accent)' : 'var(--text-muted)', transition: '0.2s' }}>
-                                        <FiThumbsUp size={18} />
-                                    </button>
-                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                        {post.upvotes + (voted === 'up' ? 1 : 0)}
-                                    </span>
-                                </div>
-
-                                {/* Content */}
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem', alignItems: 'center' }}>
-                                        <span className={`badge ${post.flair.includes('✅') ? 'badge-success' : post.flair.includes('❌') ? 'badge-error' : 'badge-warning'}`} style={{ fontSize: '0.7rem' }}>
-                                            {post.flair}
-                                        </span>
-                                        <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>{post.company}</span>
-                                        <span className="badge badge-accent" style={{ fontSize: '0.7rem' }}>{post.role}</span>
-                                        <span className="badge" style={{ fontSize: '0.7rem', background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>{post.round}</span>
-                                        <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)' }}>{post.time}</span>
-                                    </div>
-
-                                    <h3 style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>{post.title}</h3>
-                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '0.75rem' }}>
-                                        {post.body.slice(0, 150)}...
-                                    </p>
-
-                                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                                        {post.tags.map(t => <span key={t} style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: 4, background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>#{t}</span>)}
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                        <span>By <strong style={{ color: 'var(--text-primary)' }}>{post.author}</strong>{!post.college ? '' : ` · ${post.college}`}</span>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><FiMessageCircle size={13} /> {post.comments} comments</span>
-                                    </div>
-                                </div>
-                            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                {/* Sidebar: Filters & Trends */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-text-muted mb-6 flex items-center gap-2">
+                            <FiFilter /> Filter Results
+                        </h3>
+                        <div className="space-y-4">
+                            <FilterSelect
+                                label="Company"
+                                options={['All', 'Google', 'Amazon', 'Meta', 'Netflix', 'Microsoft']}
+                                value={filter.company}
+                                onChange={(v) => setFilter({ ...filter, company: v === 'All' ? '' : v })}
+                            />
+                            <FilterSelect
+                                label="Round Type"
+                                options={['All', 'Technical', 'System Design', 'Behavioral', 'Manager']}
+                                value={filter.round_type}
+                                onChange={(v) => setFilter({ ...filter, round_type: v === 'All' ? '' : v })}
+                            />
                         </div>
-                    );
-                })}
-            </div>
+                    </div>
 
-            {/* New Post Modal */}
-            {showPost && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-                    <div className="card" style={{ width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ fontWeight: 700 }}>Share Interview Experience</h3>
-                            <button onClick={() => setShowPost(false)} className="btn btn-ghost" style={{ padding: '0.4rem' }}><FiX /></button>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <input className="input" placeholder="Title (e.g. Google SDE-2 System Design experience)" />
-                            <div className="grid-2">
-                                <select className="select"><option>Company</option>{companies.slice(1).map(c => <option key={c}>{c}</option>)}</select>
-                                <select className="select"><option>Round</option>{rounds.slice(1).map(r => <option key={r}>{r}</option>)}</select>
-                            </div>
-                            <select className="select">
-                                <option>Outcome</option><option>Got Offer ✅</option><option>Rejected ❌</option><option>Ongoing 🔄</option>
-                            </select>
-                            <textarea className="input" rows={6} placeholder="Share your experience — questions asked, tips, what worked, what didn't..." style={{ resize: 'vertical' }} />
-                            <input className="input" placeholder="Tags (comma separated): e.g. DP, Arrays, Google" />
-                            <button className="btn btn-primary" style={{ justifyContent: 'center' }}>Post Experience 🚀</button>
+                    <div className="bg-gradient-to-br from-indigo-600/10 to-transparent border border-white/5 rounded-3xl p-6">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
+                            <FiActivity /> Trending
+                        </h3>
+                        <div className="space-y-3">
+                            <TrendItem tag="GoogleL4" count="1.2k" />
+                            <TrendItem tag="DSA_Hard" count="850" />
+                            <TrendItem tag="OfferRescinded" count="420" />
                         </div>
                     </div>
                 </div>
-            )}
+
+                {/* Main Feed */}
+                <div className="lg:col-span-3 space-y-4">
+                    {loading ? (
+                        [...Array(3)].map((_, i) => <div key={i} className="h-48 bg-white/5 animate-pulse rounded-3xl" />)
+                    ) : (
+                        posts.map(post => (
+                            <PostCard
+                                key={post.id}
+                                post={post}
+                                onVote={(type) => handleVote(post.id, type)}
+                            />
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Create Post Modal */}
+            <AnimatePresence>
+                {showCreateModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="bg-bg-card border border-white/10 rounded-[2.5rem] w-full max-w-2xl p-10 overflow-hidden relative shadow-2xl"
+                        >
+                            <button
+                                onClick={() => setShowCreateModal(false)}
+                                className="absolute top-8 right-8 text-text-muted hover:text-white transition-colors"
+                            >
+                                <FiX size={24} />
+                            </button>
+
+                            <h3 className="text-2xl font-bold mb-8">Post New Experience</h3>
+
+                            <div className="space-y-4">
+                                <input
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm focus:border-indigo-500 outline-none"
+                                    placeholder="Catchy title for your experience..."
+                                    value={newPost.title}
+                                    onChange={e => setNewPost({ ...newPost, title: e.target.value })}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm"
+                                        placeholder="Company"
+                                        value={newPost.company}
+                                        onChange={e => setNewPost({ ...newPost, company: e.target.value })}
+                                    />
+                                    <input
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm"
+                                        placeholder="Role (e.g. SDE-1)"
+                                        value={newPost.role}
+                                        onChange={e => setNewPost({ ...newPost, role: e.target.value })}
+                                    />
+                                </div>
+                                <textarea
+                                    className="w-full h-48 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm resize-none focus:border-indigo-500 outline-none"
+                                    placeholder="Write the details here... What questions were asked? How was the interviewer?"
+                                    value={newPost.body}
+                                    onChange={e => setNewPost({ ...newPost, body: e.target.value })}
+                                />
+                                <button
+                                    onClick={handleCreatePost}
+                                    className="w-full btn btn-primary py-4 rounded-xl font-bold"
+                                >
+                                    Publish Post
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+function PostCard({ post, onVote }) {
+    return (
+        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.07] transition-all flex gap-6">
+            <div className="flex flex-col items-center gap-1 shrink-0">
+                <button
+                    onClick={() => onVote(1)}
+                    className="p-1 hover:bg-white/10 rounded-md text-text-muted hover:text-indigo-400 transition-all"
+                >
+                    <FiChevronUp size={24} />
+                </button>
+                <span className="text-xs font-black">{post.upvotes - post.downvotes}</span>
+                <button
+                    onClick={() => onVote(-1)}
+                    className="p-1 hover:bg-white/10 rounded-md text-text-muted hover:text-pink-400 transition-all"
+                >
+                    <FiChevronDown size={24} />
+                </button>
+            </div>
+
+            <div className="flex-1 space-y-4">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest">{post.company}</span>
+                    <span className="px-2 py-0.5 rounded-md bg-pink-500/10 text-pink-400 text-[10px] font-black uppercase tracking-widest">{post.role}</span>
+                    <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest ml-auto">{new Date(post.created_at).toLocaleDateString()}</span>
+                </div>
+
+                <h4 className="text-lg font-bold tracking-tight text-white leading-tight underline-offset-4 decoration-indigo-500/40">{post.title}</h4>
+                <p className="text-sm text-text-secondary line-clamp-2 leading-relaxed">{post.body}</p>
+
+                <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white uppercase">
+                            {post.user?.name?.[0] || 'U'}
+                        </div>
+                        <span className="text-xs font-bold text-text-muted">{post.user?.name || 'Anonymous User'}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-text-muted">
+                        <div className="flex items-center gap-1.5 text-xs font-bold">
+                            <FiMessageCircle size={16} /> 12 Comments
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-bold">
+                            <FiGlobe size={16} /> Public
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FilterSelect({ label, options, value, onChange }) {
+    return (
+        <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted pl-1">{label}</label>
+            <select
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-text-secondary outline-none appearance-none cursor-pointer"
+            >
+                {options.map(o => <option key={o} value={o} className="bg-bg-card">{o}</option>)}
+            </select>
+        </div>
+    );
+}
+
+function TrendItem({ tag, count }) {
+    return (
+        <div className="flex justify-between items-center group cursor-pointer">
+            <span className="text-sm font-medium text-text-secondary group-hover:text-white transition-colors">#{tag}</span>
+            <span className="text-[10px] font-black text-text-muted">{count} posts</span>
         </div>
     );
 }

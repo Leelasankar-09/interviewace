@@ -1,282 +1,282 @@
+// src/pages/dashboard/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    RadarChart, Radar, PolarGrid, PolarAngleAxis, Legend
+    RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
 import {
     FiCode, FiMic, FiLayers, FiFileText, FiTrendingUp, FiAward,
-    FiZap, FiActivity, FiSearch, FiCheckCircle, FiClock, FiPlus,
-    FiChevronRight, FiTrendingDown, FiTarget
+    FiZap, FiActivity, FiTarget, FiPlus, FiChevronRight, FiCheckCircle,
+    FiLayout, FiMessageSquare, FiCalendar
 } from 'react-icons/fi';
-import useAuthStore from '../store/authStore';
-import axios from '../api/axios';
-
-const COLORS = ['#c2410c', '#ea580c', '#fb923c', '#fdba74', '#fed7aa', '#7c2d12'];
+import useAuthStore from '../../store/authStore';
+import api from '../../api/axios';
 
 export default function Dashboard() {
     const { user } = useAuthStore();
     const navigate = useNavigate();
-    const [stats, setStats] = useState({ overall_score: 0, problems_solved: 0, ats_score: 0, current_streak: 0 });
-    const [readiness, setReadiness] = useState({ overall_readiness: 0, recommendations: [] });
-    const [streakData, setStreakData] = useState([]);
-    const [activity, setActivity] = useState([]);
-    const [chartData, setChartData] = useState(null);
+    const [data, setData] = useState(null);
+    const [charts, setCharts] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchDashboard = async () => {
             try {
-                const [statsRes, streakRes, activityRes, chartRes, readinessRes] = await Promise.all([
-                    axios.get('/api/dashboard/stats'),
-                    axios.get('/api/dashboard/streak'),
-                    axios.get('/api/dashboard/activity'),
-                    axios.get('/api/dashboard/charts'),
-                    axios.get('/api/prep/readiness')
+                const [dashRes, chartRes] = await Promise.all([
+                    api.get('/dashboard'),
+                    api.get('/dashboard/charts')
                 ]);
-                setStats(statsRes.data);
-                setStreakData(streakRes.data);
-                setActivity(activityRes.data);
-                setChartData(chartRes.data);
-                setReadiness(readinessRes.data);
+                setData(dashRes.data);
+                setCharts(chartRes.data);
             } catch (error) {
-                console.error("Failed to fetch dashboard data", error);
+                console.error("Dashboard Load Error", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
+        fetchDashboard();
     }, []);
 
-    const cardVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: (i) => ({
-            opacity: 1,
-            y: 0,
-            transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" }
-        })
-    };
+    if (loading) return <DashboardSkeleton />;
 
-    if (loading) {
-        return <DashboardSkeleton />;
-    }
+    const stats = data?.stats || {};
+    const readiness = data?.readiness_score || {};
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-12 space-y-12 bg-background min-h-screen">
+        <div className="max-w-[1400px] mx-auto animate-fade">
+            {/* Header / Hero */}
+            <div className="relative mb-12 p-8 md:p-12 rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-indigo-600/10 to-pink-500/5 border border-white/5">
+                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
 
-            {/* --- Hero Header --- */}
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white p-10 rounded-[2.5rem] shadow-soft border border-stone-100 relative overflow-hidden">
-                <div className="relative z-10 space-y-3">
-                    <div className="flex items-center gap-2 text-terracotta font-serif italic text-lg leading-none">
-                        <FiTarget /> {readiness.overall_readiness > 70 ? 'You are doing great!' : 'Keep pushing forward.'}
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                    <div className="space-y-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest">
+                            <FiActivity /> Interview Ready Level: {readiness.score > 80 ? 'Expert' : 'Intermediate'}
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                            Welcome Back, <span className="gradient-text">{user?.name?.split(' ')[0]}</span>
+                        </h1>
+                        <p className="text-text-secondary max-w-lg">
+                            You're currently in the <span className="text-indigo-400 font-semibold">Top 15%</span> of candidates for {user?.target_role || 'Software Engineering'}. Let's close those skill gaps today.
+                        </p>
                     </div>
-                    <h1 className="text-5xl font-serif text-slate-900 leading-tight">
-                        Welcome back, <span className="text-terracotta">{user?.name?.split(' ')[0]}</span>
-                    </h1>
-                    <p className="text-slate-500 text-lg font-medium max-w-xl">
-                        {readiness.overall_readiness > 0
-                            ? `Your current readiness score is ${readiness.overall_readiness}%. You've improved by 15% since last week.`
-                            : "Start your first AI evaluation to see your readiness score."}
-                    </p>
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => navigate('/mock')}
+                            className="btn btn-primary px-8 py-4 rounded-2xl shadow-glow"
+                        >
+                            <FiMic className="text-lg" /> Enter Mock Room
+                        </button>
+                    </div>
                 </div>
-
-                <div className="flex flex-wrap gap-4 relative z-10">
-                    <button
-                        onClick={() => navigate('/voice-eval')}
-                        className="flex items-center gap-3 px-8 py-4 bg-terracotta text-white rounded-2xl font-bold shadow-xl shadow-terracotta/20 hover:bg-orange-800 hover:-translate-y-1 transition-all active:translate-y-0"
-                    >
-                        <FiMic size={20} /> Start Voice Practice
-                    </button>
-                    <button
-                        onClick={() => navigate('/text-eval')}
-                        className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 hover:border-slate-300 transition-all"
-                    >
-                        <FiFileText size={20} /> New Text Session
-                    </button>
-                </div>
-
-                {/* Decorative Pattern */}
-                <div className="absolute top-[-20%] right-[-5%] w-64 h-64 bg-terracotta/5 rounded-full blur-3xl pointer-events-none" />
-            </header>
-
-            {/* --- Stat Grid --- */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[
-                    { icon: FiAward, label: 'Readiness Score', value: `${readiness.overall_readiness}%`, trend: '+15%', color: 'text-emerald-600', link: '/prep' },
-                    { icon: FiCode, label: 'Problem Proficiency', value: stats.problems_solved, trend: '+4 today', color: 'text-terracotta', link: '/dsa' },
-                    { icon: FiSearch, label: 'Resume ATS Rank', value: `${stats.ats_score}%`, trend: 'Top 10%', color: 'text-blue-600', link: '/resume' },
-                    { icon: FiZap, label: 'Active Streak', value: `${stats.current_streak} Days`, trend: 'New Daily High', color: 'text-amber-500', link: '/history' },
-                ].map((stat, i) => (
-                    <motion.div
-                        key={i}
-                        custom={i}
-                        variants={cardVariants}
-                        initial="hidden"
-                        animate="visible"
-                        onClick={() => navigate(stat.link)}
-                        className="bg-white p-8 rounded-[2rem] border border-stone-100 shadow-soft hover:shadow-high transition-all cursor-pointer group flex flex-col justify-between"
-                    >
-                        <div className="flex justify-between items-start mb-6">
-                            <div className={`p-4 rounded-2xl bg-stone-50 ${stat.color} group-hover:scale-110 transition-transform`}>
-                                <stat.icon size={28} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full">
-                                {stat.trend}
-                            </span>
-                        </div>
-                        <div>
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{stat.label}</h3>
-                            <div className="text-4xl font-serif text-slate-900 group-hover:text-terracotta transition-colors">{stat.value}</div>
-                        </div>
-                    </motion.div>
-                ))}
-            </section>
-
-            {/* --- Main Dashboard Content --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-
-                {/* Left: Progress Chart */}
-                <motion.div
-                    variants={cardVariants} custom={4} initial="hidden" animate="visible"
-                    className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-soft"
-                >
-                    <div className="flex justify-between items-center mb-10">
-                        <div>
-                            <h3 className="text-2xl font-serif text-slate-900">Consistency Heatmap</h3>
-                            <p className="text-sm text-slate-500 font-medium">Your practice patterns over the last 10 weeks.</p>
-                        </div>
-                        <div className="flex bg-stone-50 p-1 rounded-xl">
-                            <button className="px-4 py-2 bg-white shadow-soft rounded-lg text-xs font-bold text-slate-900">Weekly</button>
-                            <button className="px-4 py-2 text-xs font-bold text-slate-400">Monthly</button>
-                        </div>
-                    </div>
-
-                    <div className="h-80 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData?.weekly || []}>
-                                <defs>
-                                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#c2410c" stopOpacity={1} />
-                                        <stop offset="95%" stopColor="#ea580c" stopOpacity={0.8} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }} dy={15} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }} />
-                                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
-                                <Bar dataKey="DSA" fill="url(#barGradient)" radius={[8, 8, 8, 8]} barSize={24} />
-                                <Bar dataKey="Behavioral" fill="#cbd5e1" radius={[8, 8, 8, 8]} barSize={24} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </motion.div>
-
-                {/* Right: Recommendations & Activity */}
-                <motion.div
-                    variants={cardVariants} custom={5} initial="hidden" animate="visible"
-                    className="space-y-10"
-                >
-                    {/* Career Insights */}
-                    <div className="bg-slate-900 p-10 rounded-[2.5rem] shadow-high text-white relative overflow-hidden group">
-                        <div className="relative z-10 space-y-6">
-                            <h3 className="text-xl font-serif flex items-center gap-2">
-                                <FiZap className="text-terracotta" /> AI Growth Tips
-                            </h3>
-                            <ul className="space-y-4">
-                                {readiness.recommendations.slice(0, 3).map((rec, i) => (
-                                    <li key={i} className="flex gap-3 text-sm text-slate-400 group-hover:text-slate-300 transition-colors">
-                                        <div className="mt-1 text-terracotta"><FiCheckCircle size={16} /></div>
-                                        {rec}
-                                    </li>
-                                ))}
-                            </ul>
-                            <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-all">
-                                View Full Report
-                            </button>
-                        </div>
-                        <div className="absolute bottom-[-10%] right-[-10%] opacity-20 group-hover:scale-110 transition-transform">
-                            <FiAward size={120} className="text-terracotta" />
-                        </div>
-                    </div>
-
-                    {/* Recent sessions */}
-                    <div className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-soft">
-                        <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-xl font-serif text-slate-900">Recent Sessions</h3>
-                            <button onClick={() => navigate('/history')} className="text-xs font-bold text-terracotta hover:underline tracking-widest uppercase">View All</button>
-                        </div>
-                        <div className="space-y-6">
-                            {activity.slice(0, 4).map((act, i) => (
-                                <div key={i} className="flex items-center gap-4 group cursor-pointer" onClick={() => navigate(`/evaluation/${act.id || ''}`)}>
-                                    <div className="w-12 h-12 rounded-2xl bg-stone-50 flex items-center justify-center text-slate-400 group-hover:bg-terracotta/10 group-hover:text-terracotta transition-all">
-                                        {act.type === 'Voice' ? <FiMic size={20} /> : <FiCode size={20} />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-slate-900 truncate group-hover:text-terracotta transition-colors">{act.title}</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{act.type} · {new Date(act.date).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="text-sm font-black text-slate-800">{act.score}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </motion.div>
             </div>
 
-            {/* --- Skills & Platforms --- */}
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <div className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-soft">
-                    <h3 className="text-2xl font-serif text-slate-900 mb-10">Skill Proficiency</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                        {(chartData?.skills || []).slice(0, 6).map((skill, i) => (
-                            <div key={i} className="space-y-2">
-                                <div className="flex justify-between items-end">
-                                    <span className="text-sm font-bold text-slate-700">{skill.name}</span>
-                                    <span className="text-xs font-black text-terracotta">{skill.progress}%</span>
+            {/* Top Grid: Main Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <StatCard
+                    icon={<FiAward />}
+                    label="Readiness Score"
+                    value={`${readiness.score || 0}%`}
+                    trend="+4.2%"
+                    color="indigo"
+                />
+                <StatCard
+                    icon={<FiCode />}
+                    label="DSA Proficiency"
+                    value={stats.avg_score || 0}
+                    trend="Stable"
+                    color="pink"
+                />
+                <StatCard
+                    icon={<FiFileText />}
+                    label="ATS Score"
+                    value={`${stats.ats_score || 0}%`}
+                    trend="+12%"
+                    color="emerald"
+                />
+                <StatCard
+                    icon={<FiZap />}
+                    label="Daily Streak"
+                    value={`${stats.streak || 0} Days`}
+                    trend="Keep it up!"
+                    color="amber"
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                {/* Readiness Breakdown */}
+                <div className="lg:col-span-1 bg-white/5 backdrop-blur-xl border border-white/5 rounded-[2rem] p-8 flex flex-col">
+                    <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
+                        <FiTarget className="text-indigo-400" /> Readiness Breakdown
+                    </h3>
+
+                    <div className="flex-1 space-y-6">
+                        {readiness.breakdown && Object.entries(readiness.breakdown).map(([key, val]) => (
+                            <div key={key} className="space-y-2">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-text-secondary capitalize">{key}</span>
+                                    <span className="font-bold">{val} / 20</span>
                                 </div>
-                                <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
+                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${skill.progress}%` }}
-                                        transition={{ duration: 1, ease: "easeOut" }}
-                                        className="h-full bg-terracotta rounded-full"
+                                        animate={{ width: `${(val / 20) * 100}%` }}
+                                        className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400"
                                     />
                                 </div>
                             </div>
                         ))}
                     </div>
+
+                    <button className="mt-8 w-full py-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest hover:bg-indigo-500/20 transition-all">
+                        Generate Study Plan
+                    </button>
                 </div>
 
-                <div className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-soft">
-                    <h3 className="text-2xl font-serif text-slate-900 mb-10">Platform Engagement</h3>
-                    <div className="h-72 w-full">
+                {/* Progress Chart */}
+                <div className="lg:col-span-2 bg-white/5 backdrop-blur-xl border border-white/5 rounded-[2rem] p-8">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h3 className="text-xl font-bold">Skill Radar</h3>
+                            <p className="text-sm text-text-secondary">AI benchmarks vs your current performance</p>
+                        </div>
+                    </div>
+
+                    <div className="h-[350px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData?.radar || []}>
-                                <PolarGrid stroke="#f1f5f9" />
-                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700, textAnchor: 'middle' }} />
-                                <Radar name="Performance" dataKey="user" stroke="#c2410c" fill="#c2410c" fillOpacity={0.6} />
-                                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none' }} />
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={charts?.radar || []}>
+                                <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                                <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
+                                <Radar
+                                    name="Current"
+                                    dataKey="user"
+                                    stroke="#6366f1"
+                                    fill="#6366f1"
+                                    fillOpacity={0.4}
+                                />
+                                <Radar
+                                    name="Target"
+                                    dataKey="target"
+                                    stroke="#ec4899"
+                                    fill="transparent"
+                                    strokeDasharray="4 4"
+                                />
+                                <Tooltip contentStyle={{ background: '#16161f', border: 'none', borderRadius: '12px' }} />
                             </RadarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
-            </section>
+            </div>
 
+            {/* Streak & Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Streak Grid Placeholder */}
+                <div className="bg-white/5 backdrop-blur-xl border border-white/5 rounded-[2rem] p-8">
+                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                        <FiCalendar className="text-amber-400" /> Activity Heatmap
+                    </h3>
+                    <div className="h-48 flex items-center justify-center text-text-muted">
+                        {/* Custom Github-style contribution grid would go here */}
+                        <div className="grid grid-cols-20 gap-1">
+                            {[...Array(140)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-3 h-3 rounded-sm ${Math.random() > 0.7 ? 'bg-indigo-500/40' : 'bg-white/5'}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Shortcuts */}
+                <div className="grid grid-cols-2 gap-4">
+                    <ShortcutCard
+                        icon={<FiCode />}
+                        title="DSA Prep"
+                        desc="120+ Problems"
+                        onClick={() => navigate('/dsa')}
+                    />
+                    <ShortcutCard
+                        icon={<FiMessageSquare />}
+                        title="Behavioral"
+                        desc="STAR Methodology"
+                        onClick={() => navigate('/behavioral')}
+                    />
+                    <ShortcutCard
+                        icon={<FiLayers />}
+                        title="System Design"
+                        desc="Scale & Tradeoffs"
+                        onClick={() => navigate('/system-design')}
+                    />
+                    <ShortcutCard
+                        icon={<FiFileText />}
+                        title="Resume ATS"
+                        desc="Keywords Scan"
+                        onClick={() => navigate('/resume')}
+                    />
+                </div>
+            </div>
         </div>
+    );
+}
+
+function StatCard({ icon, label, value, trend, color }) {
+    const colors = {
+        indigo: 'from-indigo-500/20 to-indigo-500/5 text-indigo-400 border-indigo-500/20',
+        pink: 'from-pink-500/20 to-pink-500/5 text-pink-400 border-pink-500/20',
+        emerald: 'from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20',
+        amber: 'from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20',
+    };
+
+    return (
+        <motion.div
+            whileHover={{ y: -5 }}
+            className={`bg-gradient-to-br ${colors[color]} border backdrop-blur-xl p-6 rounded-3xl`}
+        >
+            <div className="flex justify-between items-start mb-4">
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-2xl">
+                    {icon}
+                </div>
+                <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md bg-white/5">
+                    {trend}
+                </div>
+            </div>
+            <div>
+                <p className="text-text-secondary text-xs font-bold uppercase tracking-widest mb-1">{label}</p>
+                <h4 className="text-3xl font-bold tracking-tight">{value}</h4>
+            </div>
+        </motion.div>
+    );
+}
+
+function ShortcutCard({ icon, title, desc, onClick }) {
+    return (
+        <button
+            onClick={onClick}
+            className="flex flex-col items-center justify-center p-6 bg-white/5 border border-white/5 rounded-[2rem] hover:bg-white/10 hover:border-white/10 transition-all group"
+        >
+            <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/20 to-pink-500/20 text-2xl mb-4 group-hover:scale-110 transition-transform">
+                {icon}
+            </div>
+            <h5 className="font-bold mb-1">{title}</h5>
+            <p className="text-[10px] text-text-muted uppercase font-bold tracking-widest">{desc}</p>
+        </button>
     );
 }
 
 function DashboardSkeleton() {
     return (
-        <div className="max-w-7xl mx-auto px-6 py-12 space-y-12 animate-pulse bg-background">
-            <div className="h-64 bg-stone-200 rounded-[2.5rem]" />
-            <div className="grid grid-cols-4 gap-8">
-                {[1, 2, 3, 4].map(i => <div key={i} className="h-48 bg-stone-200 rounded-[2.5rem]" />)}
+        <div className="max-w-[1400px] mx-auto animate-pulse space-y-12">
+            <div className="h-64 bg-white/5 rounded-[2.5rem]" />
+            <div className="grid grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <div key={i} className="h-40 bg-white/5 rounded-3xl" />)}
             </div>
-            <div className="grid grid-cols-3 gap-10">
-                <div className="col-span-2 h-96 bg-stone-200 rounded-[2.5rem]" />
-                <div className="h-96 bg-stone-200 rounded-[2.5rem]" />
+            <div className="grid grid-cols-3 gap-8">
+                <div className="h-96 bg-white/5 rounded-[2rem] col-span-1" />
+                <div className="h-96 bg-white/5 rounded-[2rem] col-span-2" />
             </div>
         </div>
     );

@@ -1,266 +1,197 @@
+// src/pages/practice/MockInterview.jsx
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    FiPlay, FiSquare, FiSend, FiUser, FiCpu,
+    FiSettings, FiArrowRight, FiCheckCircle, FiClock, FiActivity
+} from 'react-icons/fi';
+import api from '../../api/axios';
 import { toast } from 'react-toastify';
-import useAuthStore from '../store/authStore';
-import { mockAPI, analyticsAPI } from '../api/services';
+import { motion, AnimatePresence } from 'framer-motion';
+import useAuthStore from '../../store/authStore';
 
-const ROLES = ['Software Engineer', 'Frontend Engineer', 'Backend Engineer', 'Full Stack', 'Data Scientist', 'Product Manager', 'DevOps Engineer'];
-const ROUND_TYPES = ['Technical', 'Behavioral', 'HR', 'System Design'];
-
-const STARTER_QUESTIONS = {
-    Technical: ["Tell me about a technically complex project you've built.", "Explain how you'd design a scalable REST API.", "Walk me through your debugging process."],
-    Behavioral: ["Tell me about yourself.", "Describe a challenging project you worked on.", "How do you handle tight deadlines?"],
-    HR: ["Why do you want this role?", "Where do you see yourself in 5 years?", "What are your greatest strengths?"],
-    'System Design': ["Design a URL shortener like bit.ly.", "Design a notification system for millions of users.", "Design a rate limiter."],
-};
+const ROLES = ['Software Engineer', 'Frontend Engineer', 'Backend Engineer', 'Full Stack', 'Data Scientist', 'Product Manager'];
+const ROUNDS = ['Technical', 'Behavioral', 'System Design', 'HR'];
 
 export default function MockInterview() {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const [phase, setPhase] = useState('setup'); // setup | interview | summary
-    const [role, setRole] = useState('Software Engineer');
-    const [roundType, setRoundType] = useState('Technical');
+    const [role, setRole] = useState(ROLES[0]);
+    const [roundType, setRoundType] = useState(ROUNDS[0]);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
-    const [sessionSaved, setSessionSaved] = useState(false);
-    const [sessionStats, setSessionStats] = useState(null);
     const bottomRef = useRef(null);
-    const abortRef = useRef(null);
-
-    useEffect(() => {
-        analyticsAPI.track('page_view', '/mock', null, { role });
-    }, []);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const startInterview = () => {
-        const starters = STARTER_QUESTIONS[roundType] || STARTER_QUESTIONS.Technical;
-        const opener = starters[Math.floor(Math.random() * starters.length)];
-        setMessages([
-            {
-                role: 'assistant',
-                content: `👋 Welcome to your **${roundType}** interview for the **${role}** role. I'm your AI interviewer today.\n\n**First question:**\n\n${opener}`,
-            },
-        ]);
+    const startInterview = async () => {
         setPhase('interview');
-        analyticsAPI.track('feature_use', '/mock', 'start_mock_interview', { role, roundType });
+        const initialMsg = {
+            role: 'assistant',
+            content: `Hello! I'm your AI interviewer today. We'll be conducting a ${roundType} interview for the ${role} position. Ready? Let's start with: Tell me about a challenging project you've worked on recently.`
+        };
+        setMessages([initialMsg]);
     };
 
     const sendMessage = async () => {
         if (!input.trim() || isStreaming) return;
-        const userMsg = { role: 'user', content: input.trim() };
-        const newMessages = [...messages, userMsg];
-        setMessages(newMessages);
+        const userMsg = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsStreaming(true);
 
-        // Build history in Claude format (exclude system-formatted first message)
-        const history = newMessages.slice(0, -1).map(m => ({
-            role: m.role,
-            content: m.content,
-        }));
-
-        let aiResponse = '';
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/mock/chat`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/mock/chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${JSON.parse(localStorage.getItem('interviewace-auth') || '{}')?.state?.token || ''}`,
+                    'Authorization': `Bearer ${useAuthStore.getState().token}`
                 },
-                body: JSON.stringify({ history, message: input.trim(), role, round_type: roundType }),
+                body: JSON.stringify({
+                    message: input,
+                    history: messages,
+                    role: role,
+                    round_type: roundType
+                })
             });
 
-            const reader = res.body.getReader();
+            const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let assistantMsg = { role: 'assistant', content: '' };
-            setMessages(prev => [...prev, assistantMsg]);
+            let aiText = '';
+
+            setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                const chunk = decoder.decode(value);
-                aiResponse += chunk;
+                aiText += decoder.decode(value);
                 setMessages(prev => {
-                    const updated = [...prev];
-                    updated[updated.length - 1] = { role: 'assistant', content: aiResponse };
-                    return updated;
+                    const next = [...prev];
+                    next[next.length - 1].content = aiText;
+                    return next;
                 });
             }
         } catch (err) {
-            toast.error('Connection error. Please try again.');
+            toast.error("Chat connection failed");
         } finally {
             setIsStreaming(false);
         }
     };
 
-    const endInterview = async () => {
-        setPhase('summary');
-        analyticsAPI.track('feature_use', '/mock', 'end_mock_interview', { messageCount: messages.length });
-
-        // Save session to DB
-        const myAnswers = messages.filter(m => m.role === 'user');
-        const combinedAnswer = myAnswers.map(m => m.content).join('\n\n');
-        const firstQ = messages.find(m => m.role === 'assistant')?.content || '';
-
-        setSessionStats({
-            totalMessages: messages.length,
-            myAnswers: myAnswers.length,
-            wordCount: combinedAnswer.split(' ').length,
-        });
-
-        try {
-            await mockAPI.save({
-                question_text: firstQ.slice(0, 300),
-                answer_text: combinedAnswer.slice(0, 3000),
-                round_type: roundType,
-                role_tag: role,
-                conversation: messages,
-            });
-            setSessionSaved(true);
-            toast.success('Interview session saved!');
-        } catch (err) {
-            toast.error('Could not save session.');
-        }
-    };
-
-    const cs = { background: 'var(--bg-secondary)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1rem' };
-
     if (phase === 'setup') return (
-        <div className="animate-fade" style={{ maxWidth: 700, margin: '0 auto' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>🎭 Mock Interview</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Simulate a real interview with an AI interviewer that asks follow-up questions</p>
-
-            <div className="card" style={{ padding: '2rem' }}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Target Role</label>
-                    <select value={role} onChange={e => setRole(e.target.value)}
-                        style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '1rem' }}>
-                        {ROLES.map(r => <option key={r}>{r}</option>)}
-                    </select>
+        <div className="max-w-3xl mx-auto animate-fade py-12">
+            <div className="bg-white/5 border border-white/5 rounded-[3rem] p-12 text-center space-y-10">
+                <div className="space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto text-3xl text-indigo-400">
+                        <FiCpu />
+                    </div>
+                    <h2 className="text-4xl font-bold">AI Mock Interview</h2>
+                    <p className="text-text-secondary max-w-md mx-auto">Practice with a dynamic AI interviewer that adapts to your responses and asks follow-up questions.</p>
                 </div>
 
-                <div style={{ marginBottom: '2rem' }}>
-                    <label style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>Interview Round</label>
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        {ROUND_TYPES.map(rt => (
-                            <button key={rt} onClick={() => setRoundType(rt)}
-                                style={{
-                                    padding: '0.6rem 1.2rem', borderRadius: '2rem', border: '2px solid', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-                                    borderColor: roundType === rt ? 'var(--accent)' : 'var(--border)',
-                                    background: roundType === rt ? 'var(--accent)' : 'transparent',
-                                    color: roundType === rt ? '#fff' : 'var(--text-primary)'
-                                }}>
-                                {rt}
-                            </button>
-                        ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-2">Target Role</label>
+                        <select
+                            value={role}
+                            onChange={e => setRole(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-indigo-500 outline-none appearance-none"
+                        >
+                            {ROLES.map(r => <option key={r} value={r} className="bg-bg-card">{r}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-text-muted ml-2">Round Type</label>
+                        <select
+                            value={roundType}
+                            onChange={e => setRoundType(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-indigo-500 outline-none appearance-none"
+                        >
+                            {ROUNDS.map(r => <option key={r} value={r} className="bg-bg-card">{r}</option>)}
+                        </select>
                     </div>
                 </div>
 
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    💡 The AI will ask you a question, then follow up based on your answers — just like a real interview!
-                </div>
-
-                <button onClick={startInterview}
-                    style={{ width: '100%', padding: '1rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>
-                    🚀 Start Interview
+                <button
+                    onClick={startInterview}
+                    className="w-full btn btn-primary py-5 rounded-2xl text-lg font-bold shadow-glow group"
+                >
+                    Initialize Simulation <FiPlay className="ml-2 group-hover:scale-110 transition-transform" />
                 </button>
-            </div>
-        </div>
-    );
-
-    if (phase === 'summary') return (
-        <div className="animate-fade" style={{ maxWidth: 700, margin: '0 auto' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>📊 Interview Complete!</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Here's how your session went</p>
-
-            <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                    {[
-                        { label: 'Total Exchanges', value: sessionStats?.totalMessages || 0, emoji: '💬' },
-                        { label: 'Your Answers', value: sessionStats?.myAnswers || 0, emoji: '🗣️' },
-                        { label: 'Total Words', value: sessionStats?.wordCount || 0, emoji: '📝' },
-                    ].map(s => (
-                        <div key={s.label} style={{ textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: '0.75rem', padding: '1.25rem' }}>
-                            <div style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>{s.emoji}</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)' }}>{s.value}</div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.label}</div>
-                        </div>
-                    ))}
-                </div>
-                {sessionSaved && <div style={{ padding: '0.75rem 1rem', background: '#dcfce7', borderRadius: '0.5rem', color: '#166534', fontWeight: 600, fontSize: '0.9rem', marginBottom: '1rem' }}>
-                    ✅ Session saved to your history
-                </div>}
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button onClick={() => setPhase('setup')}
-                        style={{ flex: 1, padding: '0.85rem', borderRadius: '0.75rem', border: '2px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>
-                        🔄 New Interview
-                    </button>
-                    <button onClick={() => navigate('/history')}
-                        style={{ flex: 1, padding: '0.85rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem' }}>
-                        📚 View History
-                    </button>
-                </div>
             </div>
         </div>
     );
 
     return (
-        <div className="animate-fade" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>🎭 {roundType} Interview — {role}</h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>{messages.length} messages exchanged</p>
+        <div className="max-w-4xl mx-auto animate-fade flex flex-col h-[calc(100vh-140px)]">
+            {/* Nav */}
+            <div className="flex justify-between items-center mb-6 px-4">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <FiCpu />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-sm">AI Interviewer</h3>
+                        <p className="text-[10px] text-text-muted uppercase tracking-widest font-black">{roundType} • {role}</p>
+                    </div>
                 </div>
-                <button onClick={endInterview}
-                    style={{ padding: '0.6rem 1.25rem', borderRadius: '0.75rem', border: '2px solid #ef4444', background: 'transparent', color: '#ef4444', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
-                    🏁 End Interview
+                <button
+                    onClick={() => setPhase('setup')}
+                    className="px-4 py-2 bg-white/5 hover:bg-red-500/10 text-text-muted hover:text-red-400 rounded-xl text-xs font-bold transition-all"
+                >
+                    Terminate Session
                 </button>
             </div>
 
-            {/* Chat Area */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '1rem' }}>
+            {/* Chat Body */}
+            <div className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar pb-10">
                 {messages.map((msg, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                        <div style={{
-                            maxWidth: '75%', padding: '1rem 1.25rem', borderRadius: msg.role === 'user' ? '1.25rem 1.25rem 0.25rem 1.25rem' : '1.25rem 1.25rem 1.25rem 0.25rem',
-                            background: msg.role === 'user' ? 'var(--accent)' : 'var(--bg-secondary)',
-                            color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
-                            fontSize: '0.95rem', lineHeight: 1.6, whiteSpace: 'pre-wrap',
-                        }}>
-                            {msg.role === 'assistant' && <div style={{ fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.5rem', color: 'var(--accent)' }}>🤖 AI Interviewer</div>}
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] p-6 rounded-3xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
+                                ? 'bg-indigo-600 text-white rounded-tr-none'
+                                : 'bg-white/5 border border-white/5 text-text-secondary rounded-tl-none'
+                            }`}>
                             {msg.content}
                         </div>
                     </div>
                 ))}
                 {isStreaming && (
-                    <div style={{ display: 'flex', gap: '0.4rem', padding: '1rem', alignItems: 'center' }}>
-                        {[0, 150, 300].map(d => (
-                            <div key={d} style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', animation: `pulse 1s ease-in-out ${d}ms infinite` }} />
-                        ))}
+                    <div className="flex justify-start">
+                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex gap-1.5">
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" />
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+                        </div>
                     </div>
                 )}
                 <div ref={bottomRef} />
             </div>
 
-            {/* Input Area */}
-            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                <textarea
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                    placeholder="Type your answer… (Enter to send, Shift+Enter for new line)"
-                    rows={3}
-                    style={{ flex: 1, padding: '0.85rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'none', fontSize: '0.95rem' }}
-                />
-                <button onClick={sendMessage} disabled={isStreaming || !input.trim()}
-                    style={{ padding: '0 1.5rem', borderRadius: '0.75rem', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: isStreaming || !input.trim() ? 0.5 : 1 }}>
-                    Send
-                </button>
+            {/* Input */}
+            <div className="p-4 bg-bg-card">
+                <div className="relative group">
+                    <textarea
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                        placeholder="Type your response... (Enter to send)"
+                        className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-6 pr-20 text-sm focus:border-indigo-500/50 outline-none transition-all resize-none h-24"
+                    />
+                    <button
+                        onClick={sendMessage}
+                        disabled={isStreaming || !input.trim()}
+                        className="absolute right-4 bottom-4 w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                    >
+                        <FiSend size={20} />
+                    </button>
+                </div>
+                <p className="text-[10px] text-text-muted text-center mt-4 uppercase tracking-widest font-black opacity-40">
+                    Proprietary AI Engine v2.4 • Low Latency Streaming Enabled
+                </p>
             </div>
         </div>
     );

@@ -1,0 +1,55 @@
+name: Deploy InterviewAce
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - run: |
+          cd backend
+          pip install -r requirements.txt
+          # Add actual tests once implemented
+          # pytest tests/ -v
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - run: |
+          cd frontend
+          npm install
+          # npm run lint
+
+  deploy-backend:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Render
+        run: |
+          if [ "${{ secrets.RENDER_DEPLOY_HOOK }}" != "" ]; then
+            curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+          fi
+
+  deploy-frontend:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - run: |
+          if [ "${{ secrets.VERCEL_TOKEN }}" != "" ]; then
+            npm install -g vercel
+            cd frontend && vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+          fi

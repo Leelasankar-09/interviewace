@@ -31,6 +31,10 @@ import Leaderboard from './pages/dashboard/Leaderboard';
 import Badges from './pages/dashboard/Badges';
 import TextEval from './pages/practice/TextEval';
 import EvaluationReport from './pages/reports/EvaluationReport';
+import Tracker from './pages/dashboard/Tracker';
+import VocabularyCoach from './pages/practice/VocabularyCoach';
+import CompanyPrep from './pages/practice/CompanyPrep';
+import PostDetail from './pages/community/PostDetail';
 
 // Protected Route
 const Protected = ({ children }) => {
@@ -87,6 +91,10 @@ function App() {
         <Route path="/leaderboard" element={<Protected><AppLayout><Leaderboard /></AppLayout></Protected>} />
         <Route path="/badges" element={<Protected><AppLayout><Badges /></AppLayout></Protected>} />
         <Route path="/text-eval" element={<Protected><AppLayout><TextEval /></AppLayout></Protected>} />
+        <Route path="/tracker" element={<Protected><AppLayout><Tracker /></AppLayout></Protected>} />
+        <Route path="/vocabulary" element={<Protected><AppLayout><VocabularyCoach /></AppLayout></Protected>} />
+        <Route path="/company-prep" element={<Protected><AppLayout><CompanyPrep /></AppLayout></Protected>} />
+        <Route path="/community/post/:id" element={<Protected><AppLayout><PostDetail /></AppLayout></Protected>} />
         <Route path="/evaluation/:id" element={<Protected><AppLayout><EvaluationReport /></AppLayout></Protected>} />
       </Routes>
     </BrowserRouter>

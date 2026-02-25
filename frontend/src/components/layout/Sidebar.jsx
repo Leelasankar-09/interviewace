@@ -19,6 +19,7 @@ const navItems = [
     { to: '/roles', icon: FiBriefcase, label: 'Roles' },
     { to: '/platforms', icon: FiBarChart2, label: 'Platforms' },
     { to: '/questions', icon: FiHelpCircle, label: 'Question Gen' },
+    { to: '/tracker', icon: FiBriefcase, label: 'Applications' },
     { to: '/history', icon: FiClock, label: 'History' },
     { to: '/leaderboard', icon: FiAward, label: 'Leaderboard' },
     { to: '/badges', icon: FiStar, label: 'Achievements' },
