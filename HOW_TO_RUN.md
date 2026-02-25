@@ -1,114 +1,106 @@
 # 🚀 How to Run InterviewAce — Complete Guide
 
-## 🌐 Frontend (React + Vite + TailwindCSS)
-
-```powershell
-cd C:\Users\sirig\Desktop\project\interviewace\frontend
-npm run dev
-# Opens at http://localhost:5173 (or 5174)
-```
+Follow these steps to launch the **InterviewAce** platform on your Windows machine.
 
 ---
 
-## 🐍 Backend (FastAPI + Python)
+## 🐋 Docker Setup (Recommended One-Command Launch)
 
-### Step 1 — Install Python 3.11+
-Download from https://python.org
+Assuming you have **Docker Desktop** installed and running:
 
-### Step 2 — Create virtual environment
-```powershell
-cd C:\Users\sirig\Desktop\project\interviewace\backend
-python -m venv venv
-.\venv\Scripts\activate
-```
+1. **Configure Environment:**
+   ```bash
+   # In the root folder (C:\Users\sirig\Desktop\project)
+   copy .env.example .env
+   # Open .env and add your ANTHROPIC_API_KEY
+   ```
 
-### Step 3 — Install dependencies
-```powershell
-pip install fastapi uvicorn python-multipart anthropic python-jose passlib bcrypt python-dotenv PyPDF2 python-docx
-```
+2. **Launch everything:**
+   ```bash
+   docker-compose up --build
+   ```
 
-### Step 4 — Create .env file
-Copy `.env.example` to `.env` and fill in:
-```
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-JWT_SECRET=any-long-random-string
-```
-
-### Step 5 — Run the backend
-```powershell
-uvicorn app.main:app --reload --port 8000
-# API docs at http://localhost:8000/docs
-```
+- **App:** [http://localhost:5173](http://localhost:5173)
+- **API Backend:** [http://localhost:8000](http://localhost:8000)
+- **Redis & Postgres:** Started automatically in containers.
 
 ---
 
-## 🐋 Docker (Recommended for Production Simulation)
+## 🌐 Manual Setup (Local Development)
 
-Assuming you have Docker installed:
+### 🐘 Backend (FastAPI + Python)
 
-```powershell
-docker-compose up --build
+1. **Step 1 — Create virtual environment:**
+   ```powershell
+   cd backend
+   python -m venv venv
+   .\venv\Scripts\activate
+   ```
+
+2. **Step 2 — Install dependencies:**
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+3. **Step 3 — Run the backend:**
+   ```powershell
+   uvicorn app.main:app --reload --port 8000
+   ```
+   *API docs available at: [http://localhost:8000/docs](http://localhost:8000/docs)*
+
+### ⚛️ Frontend (React + Vite + TailwindCSS)
+
+1. **Step 1 — Install dependencies:**
+   ```powershell
+   cd frontend
+   npm install
+   ```
+
+2. **Step 2 — Launch development server:**
+   ```powershell
+   npm run dev
+   ```
+   *Opens at: [http://localhost:5173](http://localhost:5173)*
+
+---
+
+## 🤖 AI Features & API Keys
+
+### Anthropic API Key (Claude)
+1. Get a key from [console.anthropic.com](https://console.anthropic.com).
+2. Add to `.env` as `ANTHROPIC_API_KEY=sk-ant-...`.
+
+### What works WITHOUT an API Key (Local Logic):
+- 🔐 Secure JWT Login / Registration.
+- 🎙️ Voice recording and playback.
+- 🔴 Oh/Uhm/Uh filler word detection (Local NLP).
+- 📋 Interview Application Tracker (Kanban).
+- 👥 Community Forum & Discussion.
+- 📊 Dashboard Stats & Streak Tracking.
+
+### What REQUIRES an AI Key (Claude Integration):
+- 🤖 AI Mock Interviewer (Conversational simulation).
+- 💻 Expert Code Review (DSA complexity analysis).
+- 🏛️ System Design Tradeoff Evaluation.
+- 📄 Resume ATS Scoring & Feedback.
+- 🏢 Company Deep-Dive Insights.
+
+---
+
+## 📋 Project Directory Structure
+
 ```
-- Backend will be at: `http://localhost:8000`
-- Frontend will be at: `http://localhost:3000`
-- Redis & Postgres will be started automatically.
+interviewace/
+├── frontend/         # React Application (src/pages, src/components)
+├── backend/          # FastAPI Framework (MVC Pattern)
+│   ├── app/
+│   │   ├── controllers/  # Business logic
+│   │   ├── routes/       # API endpoints
+│   │   ├── models/       # Database schemas
+│   │   └── services/     # AI & External connections
+├── infra/            # Nginx & Infrastructure configs
+└── docker-compose.yml
+```
 
 ---
-
-## 🤖 AI Features
-
-### Getting an Anthropic API Key (for Claude AI questions)
-1. Go to https://console.anthropic.com
-2. Sign up / Log in
-3. Create an API key
-4. Add to `.env` as `ANTHROPIC_API_KEY=sk-ant-...`
-
-### Features without API key (works offline):
-- ✅ Voice recording + save
-- ✅ Filler word detection (uhm/um/uh)
-- ✅ Question generation (local bank)
-- ✅ 8-parameter scoring
-- ✅ All UI features
-
-### Features that need API key:
-- 🤖 Claude AI question generation
-- 🤖 Resume ATS AI analysis
-- 🤖 Code review AI feedback
-- 🤖 Mock interview (AI interviewer)
-
----
-
-## 🦜 Voice Recording — How it Works
-
-1. Go to **Voice Eval** page → click 🎙️ red button
-2. Allow microphone access in browser
-3. Speak your answer
-4. Click ⏹ to stop
-5. Play back your recording
-6. Click **Analyse** to get:
-   - 8 parameter scores (radar chart)
-   - **Uhm/Um detection** highlighted in red
-   - Filler word count
-   - Power word highlights
-   - Annotated transcript
-
-7. Click **Save Recording** → saves `.webm` file to `backend/recordings/`
-
----
-
-## 📋 Feature Summary
-
-| Page | Route | What it does |
-|------|-------|--------------|
-| Dashboard | `/dashboard` | Stats, charts, 70-day streak |
-| DSA Practice | `/dsa` | Code editor + AI review |
-| Behavioral | `/behavioral` | HR/STAR practice |
-| System Design | `/system-design` | Design prompts |
-| Mock Interview | `/mock` | Live AI interviewer |
-| Voice Eval ⚡ | `/voice-eval` | Record, detect fillers, score |
-| Resume ATS | `/resume` | Upload PDF → AI analysis |
-| Question Gen 🤖 | `/questions` | Generate by role/type/level |
-| Community | `/community` | Reddit-style forum |
-| Roles | `/roles` | Roadmaps per career path |
-| Platforms | `/platforms` | LeetCode/CF stats |
-| Profile | `/profile` | Privacy-controlled profile |
+Happy Practicing! 🎯
