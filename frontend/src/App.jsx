@@ -10,6 +10,7 @@ import Topbar from './components/layout/Topbar';
 
 // Pages
 import Login from './pages/auth/Login';
+import Home from './pages/Home';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
@@ -71,7 +72,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Home />} />
 
         {/* Protected */}
         <Route path="/dashboard" element={<Protected><AppLayout><Dashboard /></AppLayout></Protected>} />
