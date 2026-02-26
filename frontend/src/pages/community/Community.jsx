@@ -1,8 +1,7 @@
-// src/pages/community/Community.jsx
 import { useState, useEffect } from 'react';
 import {
     FiThumbsUp, FiMessageCircle, FiPlus, FiX, FiFilter,
-    FiHash, FiUser, FiActivity, FiGlobe, FiChevronUp, FiChevronDown
+    FiHash, FiUser, FiActivity, FiGlobe, FiChevronUp, FiChevronDown, FiSearch, FiTrendingUp
 } from 'react-icons/fi';
 import api from '../../api/axios';
 import { toast } from 'react-toastify';
@@ -15,9 +14,7 @@ export default function Community() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newPost, setNewPost] = useState({ title: '', body: '', company: '', role: '', round_type: '', flair: 'Ongoing 🔄' });
 
-    useEffect(() => {
-        fetchPosts();
-    }, [filter]);
+    useEffect(() => { fetchPosts(); }, [filter]);
 
     const fetchPosts = async () => {
         setLoading(true);
@@ -25,7 +22,7 @@ export default function Community() {
             const res = await api.get('/community/posts', { params: filter });
             setPosts(res.data.posts);
         } catch (err) {
-            toast.error("Failed to load forum");
+            toast.error("Failed to load feed");
         } finally {
             setLoading(false);
         }
@@ -36,7 +33,7 @@ export default function Community() {
             const res = await api.post(`/community/posts/${id}/vote`, { vote_type: voteType });
             setPosts(posts.map(p => p.id === id ? { ...p, upvotes: res.data.upvotes, downvotes: res.data.downvotes } : p));
         } catch (err) {
-            toast.error("Login to vote");
+            toast.error("Authentication required");
         }
     };
 
@@ -44,216 +41,210 @@ export default function Community() {
         if (!newPost.title || !newPost.body) return;
         try {
             await api.post('/community/posts', newPost);
-            toast.success("Experience Shared!");
+            toast.success("Contribution published");
             setShowCreateModal(false);
             fetchPosts();
         } catch (err) {
-            toast.error("Failed to create post");
+            toast.error("Failed to publish");
         }
     };
 
     return (
-        <div className="max-w-5xl mx-auto animate-fade pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-                <div className="space-y-1">
-                    <h2 className="text-3xl font-bold tracking-tight">Community Forum</h2>
-                    <p className="text-text-secondary text-sm">Real interview experiences from fellow candidates.</p>
+        <div className="max-w-[1200px] mx-auto pb-20 selection:bg-indigo-500/30">
+            {/* Apple Style Header */}
+            <header className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div>
+                    <h1 className="title-page text-white mb-2">Intel Exchange.</h1>
+                    <p className="text-xl text-white/40 font-medium tracking-tight">Access real interview pipelines from the global network.</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="btn btn-primary px-8 py-4 rounded-2xl shadow-glow"
+                    className="btn-primary h-12 px-8 rounded-full text-sm font-bold shadow-xl shadow-indigo-500/20 flex items-center gap-2"
                 >
-                    <FiPlus /> Share Your Story
+                    <FiPlus /> Deposit Intel
                 </button>
-            </div>
+            </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Sidebar: Filters & Trends */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-text-muted mb-6 flex items-center gap-2">
-                            <FiFilter /> Filter Results
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                {/* Sidebar Filters */}
+                <aside className="lg:col-span-3 space-y-8">
+                    <div className="glass p-8 rounded-[2.5rem] border border-white/10 space-y-8 sticky top-24">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 flex items-center gap-2">
+                            <FiFilter /> Narrow Feed
                         </h3>
-                        <div className="space-y-4">
+
+                        <div className="space-y-6">
                             <FilterSelect
-                                label="Company"
-                                options={['All', 'Google', 'Amazon', 'Meta', 'Netflix', 'Microsoft']}
+                                label="Target Company"
+                                options={['All', 'Google', 'Meta', 'Amazon', 'Apple', 'Netflix']}
                                 value={filter.company}
-                                onChange={(v) => setFilter({ ...filter, company: v === 'All' ? '' : v })}
+                                onChange={v => setFilter({ ...filter, company: v === 'All' ? '' : v })}
                             />
                             <FilterSelect
-                                label="Round Type"
-                                options={['All', 'Technical', 'System Design', 'Behavioral', 'Manager']}
+                                label="Interview Type"
+                                options={['All', 'Technical', 'Behavioral', 'Onsite']}
                                 value={filter.round_type}
-                                onChange={(v) => setFilter({ ...filter, round_type: v === 'All' ? '' : v })}
+                                onChange={v => setFilter({ ...filter, round_type: v === 'All' ? '' : v })}
                             />
                         </div>
-                    </div>
 
-                    <div className="bg-gradient-to-br from-indigo-600/10 to-transparent border border-white/5 rounded-3xl p-6">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-4 flex items-center gap-2">
-                            <FiActivity /> Trending
-                        </h3>
-                        <div className="space-y-3">
-                            <TrendItem tag="GoogleL4" count="1.2k" />
-                            <TrendItem tag="DSA_Hard" count="850" />
-                            <TrendItem tag="OfferRescinded" count="420" />
+                        <div className="pt-6 border-t border-white/5 space-y-4">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 flex items-center gap-2">
+                                <FiTrendingUp /> Trending
+                            </h4>
+                            <TrendItem tag="GoogleL5" count="4.2k" />
+                            <TrendItem tag="SystemDesign2026" count="1.1k" />
                         </div>
                     </div>
-                </div>
+                </aside>
 
-                {/* Main Feed */}
-                <div className="lg:col-span-3 space-y-4">
+                {/* Feed */}
+                <main className="lg:col-span-9 space-y-6">
+                    <div className="relative mb-10">
+                        <FiSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20" />
+                        <input
+                            placeholder="Search company intel, interview logs, salaries..."
+                            className="w-full h-16 bg-white/5 border border-white/5 rounded-[2rem] pl-14 pr-8 text-white focus:border-indigo-500/50 outline-none transition-all"
+                        />
+                    </div>
+
                     {loading ? (
-                        [...Array(3)].map((_, i) => <div key={i} className="h-48 bg-white/5 animate-pulse rounded-3xl" />)
-                    ) : (
-                        posts.map(post => (
-                            <PostCard
-                                key={post.id}
-                                post={post}
-                                onVote={(type) => handleVote(post.id, type)}
-                            />
+                        [...Array(3)].map((_, i) => (
+                            <div key={i} className="h-64 glass animate-pulse rounded-[2.5rem]" />
                         ))
+                    ) : (
+                        <div className="space-y-6">
+                            {posts.map((post, idx) => (
+                                <PostCard key={post.id} post={post} onVote={handleVote} idx={idx} />
+                            ))}
+                        </div>
                     )}
-                </div>
+                </main>
             </div>
 
-            {/* Create Post Modal */}
+            {/* Create Modal */}
             <AnimatePresence>
                 {showCreateModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-                    >
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl">
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            className="bg-bg-card border border-white/10 rounded-[2.5rem] w-full max-w-2xl p-10 overflow-hidden relative shadow-2xl"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="w-full max-w-2xl glass p-12 border border-white/10 relative"
                         >
-                            <button
-                                onClick={() => setShowCreateModal(false)}
-                                className="absolute top-8 right-8 text-text-muted hover:text-white transition-colors"
-                            >
+                            <button onClick={() => setShowCreateModal(false)} className="absolute top-10 right-10 text-white/40 hover:text-white">
                                 <FiX size={24} />
                             </button>
+                            <h2 className="title-section text-white mb-8">Share Intelligence</h2>
 
-                            <h3 className="text-2xl font-bold mb-8">Post New Experience</h3>
-
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <input
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm focus:border-indigo-500 outline-none"
-                                    placeholder="Catchy title for your experience..."
+                                    className="w-full input-glass !bg-white/5 !border-white/5 !text-white"
+                                    placeholder="Brief title of your experience..."
                                     value={newPost.title}
                                     onChange={e => setNewPost({ ...newPost, title: e.target.value })}
                                 />
                                 <div className="grid grid-cols-2 gap-4">
                                     <input
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm"
+                                        className="w-full input-glass !bg-white/5 !border-white/5 !text-white"
                                         placeholder="Company"
                                         value={newPost.company}
                                         onChange={e => setNewPost({ ...newPost, company: e.target.value })}
                                     />
                                     <input
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm"
-                                        placeholder="Role (e.g. SDE-1)"
+                                        className="w-full input-glass !bg-white/5 !border-white/5 !text-white"
+                                        placeholder="Role / Title"
                                         value={newPost.role}
                                         onChange={e => setNewPost({ ...newPost, role: e.target.value })}
                                     />
                                 </div>
                                 <textarea
-                                    className="w-full h-48 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm resize-none focus:border-indigo-500 outline-none"
-                                    placeholder="Write the details here... What questions were asked? How was the interviewer?"
+                                    className="w-full input-glass !bg-white/5 !border-white/5 !text-white h-48 resize-none"
+                                    placeholder="Detail the technical questions, interviewer sentiment, and outcome..."
                                     value={newPost.body}
                                     onChange={e => setNewPost({ ...newPost, body: e.target.value })}
                                 />
-                                <button
-                                    onClick={handleCreatePost}
-                                    className="w-full btn btn-primary py-4 rounded-xl font-bold"
-                                >
-                                    Publish Post
-                                </button>
+                                <button onClick={handleCreatePost} className="btn-primary w-full h-14 rounded-2xl font-bold">Declare Intel</button>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>
     );
 }
 
-function PostCard({ post, onVote }) {
+function PostCard({ post, onVote, idx }) {
     return (
-        <div className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:bg-white/[0.07] transition-all flex gap-6">
-            <div className="flex flex-col items-center gap-1 shrink-0">
-                <button
-                    onClick={() => onVote(1)}
-                    className="p-1 hover:bg-white/10 rounded-md text-text-muted hover:text-indigo-400 transition-all"
-                >
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+            className="glass p-10 border border-white/10 rounded-[3rem] group hover:bg-white/[0.04] transition-all flex gap-10"
+        >
+            <div className="flex flex-col items-center gap-2 shrink-0">
+                <button onClick={() => onVote(post.id, 1)} className="p-2 glass border border-white/5 rounded-full text-white/20 hover:text-indigo-400">
                     <FiChevronUp size={24} />
                 </button>
-                <span className="text-xs font-black">{post.upvotes - post.downvotes}</span>
-                <button
-                    onClick={() => onVote(-1)}
-                    className="p-1 hover:bg-white/10 rounded-md text-text-muted hover:text-pink-400 transition-all"
-                >
+                <span className="text-xs font-black text-white">{post.upvotes - post.downvotes}</span>
+                <button onClick={() => onVote(post.id, -1)} className="p-2 glass border border-white/5 rounded-full text-white/20 hover:text-rose-400">
                     <FiChevronDown size={24} />
                 </button>
             </div>
 
-            <div className="flex-1 space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest">{post.company}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-pink-500/10 text-pink-400 text-[10px] font-black uppercase tracking-widest">{post.role}</span>
-                    <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest ml-auto">{new Date(post.created_at).toLocaleDateString()}</span>
+            <div className="flex-1 space-y-6">
+                <div className="flex items-center gap-4">
+                    <span className="badge-role">{post.company}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">{post.role}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 ml-auto">{new Date(post.created_at).toLocaleDateString()}</span>
                 </div>
 
-                <h4 className="text-lg font-bold tracking-tight text-white leading-tight underline-offset-4 decoration-indigo-500/40">{post.title}</h4>
-                <p className="text-sm text-text-secondary line-clamp-2 leading-relaxed">{post.body}</p>
+                <h3 className="text-2xl font-bold text-white tracking-tight group-hover:text-indigo-400 transition-colors leading-tight">{post.title}</h3>
+                <p className="text-white/40 leading-relaxed text-sm line-clamp-2">{post.body}</p>
 
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white uppercase">
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black text-white">
                             {post.user?.name?.[0] || 'U'}
                         </div>
-                        <span className="text-xs font-bold text-text-muted">{post.user?.name || 'Anonymous User'}</span>
+                        <span className="text-xs font-bold text-white/40">{post.user?.name || 'Vetted Candidate'}</span>
                     </div>
-                    <div className="flex items-center gap-4 text-text-muted">
-                        <div className="flex items-center gap-1.5 text-xs font-bold">
-                            <FiMessageCircle size={16} /> 12 Comments
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2 text-xs font-bold text-white/20 hover:text-white transition-colors cursor-pointer">
+                            <FiMessageCircle size={16} /> 24
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs font-bold">
-                            <FiGlobe size={16} /> Public
+                        <div className="flex items-center gap-2 text-xs font-bold text-white/20">
+                            <FiGlobe size={16} /> Shared
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
 
 function FilterSelect({ label, options, value, onChange }) {
     return (
-        <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted pl-1">{label}</label>
-            <select
-                value={value}
-                onChange={e => onChange(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-text-secondary outline-none appearance-none cursor-pointer"
-            >
-                {options.map(o => <option key={o} value={o} className="bg-bg-card">{o}</option>)}
-            </select>
+        <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 pl-1">{label}</label>
+            <div className="relative">
+                <select
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-xs text-white appearance-none outline-none focus:border-indigo-500/50"
+                >
+                    {options.map(o => <option key={o} value={o} className="bg-[#12121a]">{o}</option>)}
+                </select>
+                <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none" />
+            </div>
         </div>
     );
 }
 
 function TrendItem({ tag, count }) {
     return (
-        <div className="flex justify-between items-center group cursor-pointer">
-            <span className="text-sm font-medium text-text-secondary group-hover:text-white transition-colors">#{tag}</span>
-            <span className="text-[10px] font-black text-text-muted">{count} posts</span>
+        <div className="flex justify-between items-center group cursor-pointer hover:translate-x-1 transition-transform">
+            <span className="text-xs font-bold text-white/40 group-hover:text-white transition-colors">#{tag}</span>
+            <span className="text-[10px] font-black text-white/20">{count}</span>
         </div>
     );
 }

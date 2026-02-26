@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from './store/authStore';
 import useThemeStore from './store/themeStore';
+import { useEffect } from 'react';
 
 // Layout
 import Sidebar from './components/layout/Sidebar';
@@ -37,35 +39,58 @@ import VocabularyCoach from './pages/practice/VocabularyCoach';
 import CompanyPrep from './pages/practice/CompanyPrep';
 import PostDetail from './pages/community/PostDetail';
 
-// Protected Route
+// Protected Route Component
 const Protected = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-// App Layout (with sidebar)
-const AppLayout = ({ children }) => (
-  <div style={{ display: 'flex', minHeight: '100vh' }}>
-    <Sidebar />
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Topbar />
-      <main style={{ flex: 1, overflowY: 'auto', padding: '2rem', paddingTop: '1.5rem' }}>
-        {children}
-      </main>
+// Apple-inspired App Layout
+const AppLayout = ({ children }) => {
+  return (
+    <div className="flex min-h-screen bg-transparent">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Topbar />
+        <main className="flex-1 overflow-y-auto px-10 py-8 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+          >
+            {children}
+          </motion.div>
+        </main>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 function App() {
   const { theme } = useThemeStore();
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toastTheme = theme === 'dark' || theme === 'glass' ? 'dark' : 'light';
+
   return (
     <BrowserRouter>
+      <div className="fixed inset-0 -z-50 pointer-events-none overflow-hidden">
+        {/* Apple Shifting Gradient Background */}
+        <div className="absolute inset-0 opacity-40 dark:opacity-20 animate-pulse-slow bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.15),transparent_50%)]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[100px] rounded-full animate-float" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[100px] rounded-full animate-float" style={{ animationDelay: '1s' }} />
+      </div>
+
       <ToastContainer
-        position="top-right"
+        position="bottom-center"
         autoClose={3000}
-        theme={theme === 'light' ? 'light' : 'dark'}
+        theme={toastTheme}
+        toastClassName="glass !rounded-2xl !bg-black/80 !text-white !border-white/10"
       />
+
       <Routes>
         {/* Public */}
         <Route path="/login" element={<Login />} />

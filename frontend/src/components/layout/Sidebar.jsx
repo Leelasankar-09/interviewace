@@ -5,6 +5,7 @@ import {
     FiUsers, FiBriefcase, FiBarChart2, FiUser, FiLogOut,
     FiChevronLeft, FiChevronRight, FiZap, FiHelpCircle, FiClock, FiAward, FiStar
 } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
 
 const navItems = [
@@ -18,11 +19,8 @@ const navItems = [
     { to: '/community', icon: FiUsers, label: 'Community' },
     { to: '/roles', icon: FiBriefcase, label: 'Roles' },
     { to: '/platforms', icon: FiBarChart2, label: 'Platforms' },
-    { to: '/questions', icon: FiHelpCircle, label: 'Question Gen' },
     { to: '/tracker', icon: FiBriefcase, label: 'Applications' },
-    { to: '/history', icon: FiClock, label: 'History' },
     { to: '/leaderboard', icon: FiAward, label: 'Leaderboard' },
-    { to: '/badges', icon: FiStar, label: 'Achievements' },
     { to: '/profile', icon: FiUser, label: 'Profile' },
 ];
 
@@ -34,97 +32,87 @@ export default function Sidebar() {
     const handleLogout = () => { logout(); navigate('/login'); };
 
     return (
-        <aside style={{
-            width: collapsed ? '72px' : '240px',
-            minHeight: '100vh',
-            background: 'var(--bg-secondary)',
-            borderRight: '1px solid var(--border)',
-            display: 'flex',
-            flexDirection: 'column',
-            transition: 'width 0.3s ease',
-            overflow: 'hidden',
-            flexShrink: 0,
-            position: 'sticky',
-            top: 0,
-            height: '100vh',
-        }}>
-            {/* Logo */}
-            <div style={{
-                padding: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: '1px solid var(--border)',
-            }}>
-                {!collapsed && (
-                    <span style={{ fontSize: '1.1rem', fontWeight: 800, background: 'var(--gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        InterviewAce
-                    </span>
-                )}
-                {collapsed && <span style={{ fontSize: '1.3rem' }}>🎯</span>}
-                <button onClick={() => setCollapsed(!collapsed)} className="btn btn-ghost" style={{ padding: '0.4rem', minWidth: 'auto' }}>
-                    {collapsed ? <FiChevronRight size={16} /> : <FiChevronLeft size={16} />}
+        <motion.aside
+            initial={false}
+            animate={{ width: collapsed ? 80 : 260 }}
+            className="h-screen sticky top-0 flex flex-col glass border-r border-white/10 shrink-0 z-50 overflow-hidden"
+            style={{
+                background: 'var(--sidebar-bg)',
+                backdropFilter: 'blur(32px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(32px) saturate(180%)'
+            }}
+        >
+            {/* Logo area */}
+            <div className="p-6 flex items-center justify-between border-b border-white/5">
+                <AnimatePresence>
+                    {!collapsed && (
+                        <motion.span
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent"
+                        >
+                            InterviewAce
+                        </motion.span>
+                    )}
+                </AnimatePresence>
+                {collapsed && <span className="text-2xl">🎯</span>}
+                <button
+                    onClick={() => setCollapsed(!collapsed)}
+                    className="p-2 hover:bg-white/5 rounded-lg transition-colors text-text-secondary"
+                >
+                    {collapsed ? <FiChevronRight size={18} /> : <FiChevronLeft size={18} />}
                 </button>
             </div>
 
             {/* Nav Links */}
-            <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
+            <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
                 {navItems.map(({ to, icon: Icon, label }) => (
-                    <NavLink key={to} to={to} style={{ textDecoration: 'none' }}
-                        className={({ isActive }) => isActive ? 'sidebar-link active' : 'sidebar-link'}>
-                        {({ isActive }) => (
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                padding: '0.65rem 0.85rem',
-                                borderRadius: 'var(--radius-sm)',
-                                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                background: isActive ? 'rgba(99,102,241,0.12)' : 'transparent',
-                                fontWeight: isActive ? 600 : 400,
-                                fontSize: '0.875rem',
-                                transition: 'all 0.2s ease',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                cursor: 'pointer',
-                            }}
-                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
-                                <Icon size={18} style={{ flexShrink: 0 }} />
-                                {!collapsed && <span>{label}</span>}
-                            </div>
+                    <NavLink
+                        key={to}
+                        to={to}
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${isActive
+                                ? 'bg-indigo-500/15 border border-indigo-500/20 text-indigo-500'
+                                : 'text-text-secondary hover:bg-white/5'
+                            }`
+                        }
+                    >
+                        <Icon className="shrink-0 group-hover:scale-110 transition-transform" size={20} />
+                        {!collapsed && (
+                            <motion.span
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-sm font-medium tracking-wide whitespace-nowrap"
+                            >
+                                {label}
+                            </motion.span>
                         )}
                     </NavLink>
                 ))}
             </nav>
 
-            {/* User + Logout */}
-            <div style={{ padding: '1rem 0.75rem', borderTop: '1px solid var(--border)' }}>
+            {/* Footer / User Profile */}
+            <div className="p-6 border-t border-white/5 space-y-4">
                 {!collapsed && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                        <div style={{
-                            width: 36, height: 36, borderRadius: '50%',
-                            background: 'var(--gradient)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'white', fontWeight: 700, fontSize: '0.875rem', flexShrink: 0,
-                        }}>
+                    <div className="flex items-center gap-3 p-2">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/20">
                             {user?.name?.[0]?.toUpperCase() || 'U'}
                         </div>
-                        <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {user?.name || 'User'}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {user?.email || ''}
-                            </div>
+                        <div className="overflow-hidden">
+                            <h4 className="text-sm font-bold text-text-primary truncate">{user?.name || 'Candidate'}</h4>
+                            <p className="text-[10px] uppercase font-black tracking-widest text-text-muted">Pro Member</p>
                         </div>
                     </div>
                 )}
-                <button onClick={handleLogout} className="btn btn-ghost" style={{ width: '100%', justifyContent: collapsed ? 'center' : 'flex-start', gap: '0.75rem', padding: '0.5rem 0.85rem', fontSize: '0.85rem', color: 'var(--error)' }}>
-                    <FiLogOut size={16} />
-                    {!collapsed && 'Logout'}
+                <button
+                    onClick={handleLogout}
+                    className={`flex items-center gap-3 w-full p-3 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-all ${collapsed ? 'justify-center' : ''}`}
+                >
+                    <FiLogOut size={18} />
+                    {!collapsed && <span className="text-sm font-bold">Logout</span>}
                 </button>
             </div>
-        </aside>
+        </motion.aside>
     );
 }

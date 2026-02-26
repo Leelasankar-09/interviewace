@@ -1,156 +1,129 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiChevronRight, FiClock, FiTrendingUp, FiStar } from 'react-icons/fi';
+import { FiChevronRight, FiClock, FiTrendingUp, FiStar, FiTriangle } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 
 const roles = [
     {
         id: 'swe',
         title: 'Software Engineer',
         emoji: '💻',
-        demand: 'Very High',
-        salary: '₹8L - ₹40L',
-        timeline: '8-12 weeks',
+        demand: 'Critical',
+        salary: '₹12L - ₹45L',
+        timeline: '12 weeks',
         color: '#6366f1',
-        mustHave: ['Data Structures & Algorithms', 'Object-Oriented Programming', 'System Design Basics', 'SQL & Databases', 'Git & Version Control', 'One Language (Python/Java/C++)'],
-        goodToHave: ['Cloud (AWS/GCP/Azure)', 'Docker & Kubernetes', 'CI/CD pipelines', 'GraphQL', 'Redis/Caching'],
-        advanced: ['Distributed Systems', 'Microservices Architecture', 'Kafka/Message Queues', 'Performance Tuning'],
-        companies: ['Google', 'Amazon', 'Microsoft', 'Flipkart', 'Swiggy', 'Zepto'],
-        rounds: ['Coding Round (DSA)', 'Technical Interview', 'System Design', 'HR Round'],
+        skills: ['DSA', 'System Design', 'Core CS'],
+        gradient: 'from-indigo-600/20 to-indigo-600/5'
     },
     {
         id: 'frontend',
-        title: 'Frontend Developer',
+        title: 'Frontend Engineer',
         emoji: '🎨',
-        demand: 'High',
-        salary: '₹6L - ₹30L',
-        timeline: '6-10 weeks',
+        demand: 'Ultra High',
+        salary: '₹8L - ₹35L',
+        timeline: '10 weeks',
         color: '#ec4899',
-        mustHave: ['HTML5, CSS3, JavaScript (ES6+)', 'React or Vue or Angular', 'REST APIs & Fetch/Axios', 'Responsive Design', 'Git', 'Browser DevTools'],
-        goodToHave: ['TypeScript', 'Next.js / Nuxt.js', 'State Management (Redux/Zustand)', 'CSS Frameworks', 'Web Performance Optimization'],
-        advanced: ['Micro-Frontends', 'WebAssembly', 'PWA', 'WebSockets', 'Three.js / WebGL'],
-        companies: ['Zomato', 'Razorpay', 'Meesho', 'CRED', 'Groww'],
-        rounds: ['Portfolio Review', 'Coding (JS/DOM)', 'React Assignment', 'HR Round'],
+        skills: ['React', 'TypeScript', 'Layout'],
+        gradient: 'from-pink-600/20 to-pink-600/5'
     },
     {
         id: 'ml',
         title: 'ML Engineer',
         emoji: '🤖',
-        demand: 'Very High',
-        salary: '₹12L - ₹50L',
-        timeline: '12-16 weeks',
+        demand: 'Hyper High',
+        salary: '₹15L - ₹65L',
+        timeline: '16 weeks',
         color: '#10b981',
-        mustHave: ['Python', 'Linear Algebra & Statistics', 'Supervised & Unsupervised ML', 'Scikit-learn, TensorFlow or PyTorch', 'Feature Engineering', 'Model Evaluation Metrics'],
-        goodToHave: ['NLP & Transformers', 'Computer Vision', 'MLOps (MLflow, Kubeflow)', 'SQL & Spark', 'A/B Testing'],
-        advanced: ['LLMs & Fine-tuning', 'Reinforcement Learning', 'Distributed ML Training', 'RAG Systems'],
-        companies: ['Google DeepMind', 'OpenAI', 'Sarvam AI', 'Flipkart', 'Paytm'],
-        rounds: ['ML Theory Round', 'Coding (Python)', 'Case Study', 'System Design (ML)', 'HR'],
+        skills: ['RAG', 'PyTorch', 'Linear Algebra'],
+        gradient: 'from-emerald-600/20 to-emerald-600/5'
     },
     {
         id: 'devops',
-        title: 'DevOps Engineer',
+        title: 'DevOps Architect',
         emoji: '⚙️',
-        demand: 'High',
-        salary: '₹8L - ₹35L',
-        timeline: '10-14 weeks',
+        demand: 'Essential',
+        salary: '₹10L - ₹40L',
+        timeline: '14 weeks',
         color: '#f59e0b',
-        mustHave: ['Linux & Shell Scripting', 'Docker & Kubernetes', 'CI/CD (Jenkins/GitHub Actions)', 'AWS / GCP / Azure', 'Terraform (IaC)', 'Monitoring (Prometheus, Grafana)'],
-        goodToHave: ['Ansible', 'Helm Charts', 'Service Mesh (Istio)', 'ELK Stack', 'ArgoCD'],
-        advanced: ['Multi-Cloud Architecture', 'FinOps', 'Zero-Trust Security', 'Chaos Engineering'],
-        companies: ['ThoughtWorks', 'Razorpay', 'Walmart Labs', 'PhonePe', 'Dream11'],
-        rounds: ['Linux/Scripting Test', 'Technical Deep Dive', 'Architecture Design', 'HR'],
+        skills: ['Kubernetes', 'CI/CD', 'Cloud'],
+        gradient: 'from-amber-600/20 to-amber-600/5'
     },
     {
         id: 'data',
         title: 'Data Scientist',
         emoji: '📊',
-        demand: 'High',
-        salary: '₹9L - ₹40L',
-        timeline: '10-14 weeks',
+        demand: 'Strategic',
+        salary: '₹10L - ₹45L',
+        timeline: '14 weeks',
         color: '#3b82f6',
-        mustHave: ['Python (Pandas, NumPy)', 'Statistics & Probability', 'ML Algorithms', 'SQL', 'Data Visualization (Matplotlib, Seaborn)', 'Jupyter Notebooks'],
-        goodToHave: ['R Language', 'Spark / BigQuery', 'Tableau / Power BI', 'Time Series Analysis', 'Bayesian Methods'],
-        advanced: ['Deep Learning', 'Causal Inference', 'Experiment Design', 'NLP'],
-        companies: ['Urban Company', 'MakeMyTrip', 'Agoda', 'BookMyShow', 'Meesho'],
-        rounds: ['Python/SQL Test', 'Stats/Probability', 'ML Case Study', 'Communication Round', 'HR'],
+        skills: ['Statistics', 'Pandas', 'Modeling'],
+        gradient: 'from-blue-600/20 to-blue-600/5'
     },
     {
         id: 'pm',
-        title: 'Product Manager',
+        title: 'Product Leader',
         emoji: '🚀',
-        demand: 'Very High',
-        salary: '₹15L - ₹60L',
-        timeline: '8-12 weeks',
+        demand: 'Executive',
+        salary: '₹18L - ₹70L',
+        timeline: '12 weeks',
         color: '#a855f7',
-        mustHave: ['Product Sense & Metrics', 'User Research & Empathy', 'Data Analysis (Excel/SQL)', 'Roadmapping & Prioritization', 'Stakeholder Communication', 'A/B Testing basics'],
-        goodToHave: ['Technical Background', 'Growth Hacking', 'Agile/Scrum', 'Figma/Wireframing', 'SQL'],
-        advanced: ['ML Product Strategy', 'Pricing & Monetization', 'Platform Product Management', 'Market Expansion'],
-        companies: ['Flipkart', 'Amazon', 'Google', 'Swiggy', 'Razorpay'],
-        rounds: ['Product Sense Round', 'Analytical Round', 'Technical Round (basics)', 'Leadership Principles', 'HR'],
-    },
+        skills: ['Strategy', 'Execution', 'Metrics'],
+        gradient: 'from-purple-600/20 to-purple-600/5'
+    }
 ];
 
 export default function Roles() {
     const navigate = useNavigate();
 
     return (
-        <div style={{ maxWidth: 1200, margin: '0 auto' }} className="animate-fade">
-            <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>🎯 Role-Based Roadmaps</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                    Select your target role to get a complete learning roadmap, skills, and interview questions.
-                </p>
-            </div>
+        <div className="max-w-[1200px] mx-auto pb-20 selection:bg-indigo-500/30">
+            <header className="mb-16">
+                <h1 className="title-page text-white mb-2">Carrier Blueprints.</h1>
+                <p className="text-xl text-white/40 font-medium tracking-tight">Structured intelligence paths for elite engineering roles.</p>
+            </header>
 
-            <div className="grid-3">
-                {roles.map((role) => (
-                    <div key={role.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.25s' }}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {roles.map((role, idx) => (
+                    <motion.div
+                        key={role.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
                         onClick={() => navigate(`/roles/${role.id}`)}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = role.color; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+                        className={`glass p-10 rounded-[3rem] border border-white/10 cursor-pointer group hover:border-white/30 transition-all relative overflow-hidden`}
+                    >
+                        <div className={`absolute inset-0 bg-gradient-to-br ${role.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                            <div style={{ width: 48, height: 48, borderRadius: 12, background: `${role.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
-                                {role.emoji}
-                            </div>
-                            <div>
-                                <h3 style={{ fontWeight: 700, fontSize: '1rem' }}>{role.title}</h3>
-                                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem', borderRadius: 100, background: `${role.color}20`, color: role.color, fontWeight: 600 }}>
-                                    {role.demand} Demand
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-10">
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                                    {role.emoji}
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                                    {role.demand} Priority
                                 </span>
                             </div>
-                        </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                <FiTrendingUp size={13} /> {role.salary}
+                            <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">{role.title}</h3>
+                            <div className="flex gap-4 mb-10 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                                <span className="flex items-center gap-1.5"><FiTrendingUp /> {role.salary}</span>
+                                <span className="flex items-center gap-1.5"><FiClock /> {role.timeline}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                <FiClock size={13} /> {role.timeline}
-                            </div>
-                        </div>
 
-                        <div style={{ marginBottom: '1rem' }}>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>Must-Have Skills:</p>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                                {role.mustHave.slice(0, 3).map(s => (
-                                    <span key={s} className="badge badge-accent" style={{ fontSize: '0.68rem' }}>{s}</span>
-                                ))}
-                                {role.mustHave.length > 3 && (
-                                    <span className="badge" style={{ fontSize: '0.68rem', background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>+{role.mustHave.length - 3} more</span>
-                                )}
+                            <div className="space-y-4 mb-10">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Core Competencies</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {role.skills.map(s => (
+                                        <span key={s} className="px-3 py-1.5 rounded-lg bg-white/5 text-[10px] font-bold text-white/60">{s}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:translate-x-1 transition-transform">
+                                Access Blueprint <FiChevronRight />
                             </div>
                         </div>
-
-                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                            {role.companies.slice(0, 4).map(c => (
-                                <span key={c} style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '0.15rem 0.5rem', borderRadius: 4 }}>{c}</span>
-                            ))}
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: role.color, fontSize: '0.82rem', fontWeight: 600 }}>
-                            View Full Roadmap <FiChevronRight />
-                        </div>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
         </div>

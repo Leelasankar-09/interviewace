@@ -1,29 +1,16 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { FiSun, FiMoon, FiSettings, FiBell } from 'react-icons/fi';
+import { FiSun, FiMoon, FiSettings, FiBell, FiSearch, FiMonitor, FiCpu, FiCloud } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import useThemeStore from '../../store/themeStore';
 import useAuthStore from '../../store/authStore';
 
 const themes = [
-    { id: 'dark', label: '🌙 Dark', icon: '🌙' },
-    { id: 'light', label: '☀️ Light', icon: '☀️' },
-    { id: 'glass', label: '🧊 Glass', icon: '🧊' },
-    { id: 'cyber', label: '⚡ Cyber', icon: '⚡' },
+    { id: 'dark', label: 'Dark Mode', icon: FiMoon },
+    { id: 'light', label: 'Light Mode', icon: FiSun },
+    { id: 'glass', label: 'Glass View', icon: FiMonitor },
+    { id: 'cyber', label: 'Cyber Punk', icon: FiCpu },
 ];
-
-const pageTitles = {
-    '/dashboard': 'Dashboard',
-    '/dsa': 'DSA Practice',
-    '/behavioral': 'Behavioral Interview',
-    '/system-design': 'System Design',
-    '/mock': 'Mock Interview',
-    '/voice-eval': 'Voice Evaluation',
-    '/resume': 'Resume ATS Scanner',
-    '/community': 'Community Forum',
-    '/roles': 'Roles & Roadmaps',
-    '/platforms': 'Coding Platforms',
-    '/profile': 'My Profile',
-};
 
 export default function Topbar() {
     const { theme, setTheme } = useThemeStore();
@@ -31,71 +18,69 @@ export default function Topbar() {
     const location = useLocation();
     const [showThemes, setShowThemes] = useState(false);
 
-    const title = Object.entries(pageTitles).find(([path]) => location.pathname.startsWith(path))?.[1] || 'InterviewAce';
-
     return (
-        <header style={{
-            padding: '0.875rem 2rem',
-            background: 'var(--bg-secondary)',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            position: 'sticky',
-            top: 0,
-            zIndex: 100,
-        }}>
-            <div>
-                <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h1>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
+        <header
+            className="sticky top-0 z-40 flex items-center justify-between px-10 h-16 border-b border-black/5 dark:border-white/5"
+            style={{
+                background: 'var(--menubar-bg)',
+                backdropFilter: 'blur(32px) saturate(200%)',
+                WebkitBackdropFilter: 'blur(32px) saturate(200%)'
+            }}
+        >
+            <div className="flex items-center gap-8">
+                <div className="relative group focus-within:w-64 w-48 transition-all duration-300">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm" />
+                    <input
+                        type="text"
+                        placeholder="Search anything..."
+                        className="w-full h-9 pl-9 pr-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-indigo-500/50 rounded-full text-xs outline-none transition-all"
+                    />
+                </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Theme Switcher */}
-                <div style={{ position: 'relative' }}>
-                    <button className="btn btn-ghost" style={{ padding: '0.5rem 0.85rem', gap: '0.4rem', fontSize: '0.85rem' }}
-                        onClick={() => setShowThemes(!showThemes)}>
-                        {themes.find(t => t.id === theme)?.icon} Theme
+            <div className="flex items-center gap-4">
+                <div className="relative">
+                    <button
+                        onClick={() => setShowThemes(!showThemes)}
+                        className="flex items-center gap-2 px-4 py-1.5 h-9 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-full text-xs font-bold transition-all hover:bg-black/10 dark:hover:bg-white/10"
+                    >
+                        {themes.find(t => t.id === theme)?.label}
                     </button>
-                    {showThemes && (
-                        <div style={{
-                            position: 'absolute', top: '110%', right: 0, zIndex: 200,
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: 'var(--radius-sm)', padding: '0.5rem', minWidth: '140px',
-                            boxShadow: 'var(--shadow)',
-                        }}>
-                            {themes.map(t => (
-                                <button key={t.id} onClick={() => { setTheme(t.id); setShowThemes(false); }}
-                                    style={{
-                                        display: 'block', width: '100%', textAlign: 'left',
-                                        padding: '0.5rem 0.75rem', borderRadius: 4, border: 'none', cursor: 'pointer',
-                                        background: theme === t.id ? 'rgba(99,102,241,0.15)' : 'transparent',
-                                        color: theme === t.id ? 'var(--accent)' : 'var(--text-secondary)',
-                                        fontSize: '0.85rem', fontFamily: 'var(--font-main)',
-                                        transition: 'all 0.2s',
-                                    }}>
-                                    {t.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+
+                    <AnimatePresence>
+                        {showThemes && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                className="absolute right-0 top-12 w-48 p-2 glass z-50 overflow-hidden"
+                            >
+                                {themes.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => { setTheme(t.id); setShowThemes(false); }}
+                                        className={`flex items-center gap-3 w-full p-3 rounded-xl text-xs font-medium transition-all ${theme === t.id
+                                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                                                : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'
+                                            }`}
+                                    >
+                                        <t.icon size={14} />
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
-                {/* Notifications (placeholder) */}
-                <button className="btn btn-ghost" style={{ padding: '0.5rem' }}>
-                    <FiBell size={18} />
-                </button>
-
-                {/* User Avatar */}
-                <div style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: 'var(--gradient)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
-                }}>
-                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+                    <button className="p-2.5 text-text-secondary hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors relative">
+                        <FiBell size={18} />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-gray-900" />
+                    </button>
+                    <button className="p-2.5 text-text-secondary hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+                        <FiSettings size={18} />
+                    </button>
                 </div>
             </div>
         </header>
